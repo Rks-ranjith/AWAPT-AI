@@ -1,4 +1,0 @@
-[      82ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=213173c0:20102
-[     176ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:8000/api/v1/targets/:0
-[  198612ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:864
-[  318957ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=83d12ce1:20102
