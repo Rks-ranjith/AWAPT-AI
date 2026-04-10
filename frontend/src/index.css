@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+@theme {
+  /* Premium Modern Palette */
+  --color-brand-primary: #6366F1; /* Indigo */
+  --color-brand-secondary: #0EA5E9; /* Sky Blue */
+  
+  --color-surface-dark: #0A0B0E;
+  --color-surface-dark-elevated: #16191F;
+  --color-surface-light: #F8FAFC;
+  --color-surface-light-elevated: #FFFFFF;
+  
+  --color-text-dark-primary: #F8FAFC;
+  --color-text-dark-secondary: #94A3B8;
+  --color-text-light-primary: #020617; /* Very Dark Primary (Slate 950) */
+  --color-text-light-secondary: #0F172A; /* High Contrast Secondary (Slate 900) */
+  --color-text-light-muted: #334155; /* Darker Muted for clarity (Slate 700) */
+
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Typography - Clean & Modern */
+  --font-display: "Outfit", "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* Refined Shadows */
+  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+@layer base {
+  :root {
+    --bg-main: var(--color-surface-light);
+    --bg-card: var(--color-surface-light-elevated);
+    --text-primary:   #020617;  /* Slate 950 — near black */
+    --text-secondary: #1e293b;  /* Slate 800 — dark but softer */
+    --text-muted:     #475569;  /* Slate 600 — readable mid-grey */
+    --border-subtle: rgba(0, 0, 0, 0.18);
+    --accent: var(--color-brand-primary);
+    color-scheme: light;
+  }
+
+  .dark {
+    --bg-main: var(--color-surface-dark);
+    --bg-card: var(--color-surface-dark-elevated);
+    --text-primary:   #F8FAFC;  /* Slate 50 */
+    --text-secondary: #94A3B8;  /* Slate 400 */
+    --text-muted:     #64748B;  /* Slate 500 */
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --accent: var(--color-brand-primary);
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    @apply antialiased;
+  }
+
+  /* ─── Force ALL elements to inherit theme colour — kills browser grey defaults ─── */
+  *, *::before, *::after {
+    color: inherit;
+  }
+
+  /* Re-allow explicit colour overrides from utility classes */
+  [class*="text-red"],
+  [class*="text-blue"],
+  [class*="text-green"],
+  [class*="text-emerald"],
+  [class*="text-indigo"],
+  [class*="text-amber"],
+  [class*="text-orange"],
+  [class*="text-yellow"],
+  [class*="text-purple"],
+  [class*="text-pink"],
+  [class*="text-sky"],
+  [class*="text-teal"],
+  [class*="text-slate"],
+  [class*="text-gray"],
+  [class*="text-white"],
+  [class*="text-black"],
+  [class*="text-["] {
+    color: revert-layer;
+  }
+
+  /* ─── Input / textarea / select text ─── */
+  input,
+  textarea,
+  select {
+    color: var(--text-primary);
+    background-color: var(--bg-main);
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    color: var(--text-primary);
+    background-color: var(--bg-main);
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+}
+
+@layer utilities {
+  .premium-card {
+    @apply rounded-2xl border transition-all duration-300;
+    background-color: var(--bg-card);
+    border-color: var(--border-subtle);
+    box-shadow: var(--shadow-premium);
+  }
+
+  .premium-card:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .light .glass {
+    background: rgba(255, 255, 255, 0.85); /* More opaque */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* Custom Glow Accents */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Scrollbar Style */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full;
+  background: var(--border-subtle);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

@@ -1,0 +1,26 @@
+# AWAP-AI Backend Requirements
+
+fastapi
+uvicorn
+sqlalchemy[asyncio]
+alembic
+psycopg[binary]
+asyncpg
+redis
+celery
+playwright
+httpx
+pydantic
+pydantic-settings
+python-multipart
+pyjwt
+python-jose[cryptography]
+passlib[bcrypt]
+BeautifulSoup4
+requests
+python-dotenv
+dnslib
+pycryptodome
+networkx
+psycopg2-binary
+openai

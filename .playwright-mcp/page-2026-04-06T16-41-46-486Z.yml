@@ -1,0 +1,148 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]: AWAP.AI
+    - navigation [ref=e10]:
+      - generic [ref=e11]:
+        - heading "Monitor" [level=3] [ref=e12]
+        - generic [ref=e13]:
+          - link "Overview" [ref=e14] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e15]
+            - generic [ref=e16]: Overview
+          - link "Engine Console" [ref=e17] [cursor=pointer]:
+            - /url: /scans
+            - img [ref=e18]
+            - generic [ref=e20]: Engine Console
+            - img [ref=e194]
+          - link "Security Analytics" [ref=e21] [cursor=pointer]:
+            - /url: /analytics
+            - img [ref=e22]
+            - generic [ref=e23]: Security Analytics
+      - generic [ref=e24]:
+        - heading "Operation" [level=3] [ref=e25]
+        - generic [ref=e26]:
+          - link "Attack Surface" [ref=e27] [cursor=pointer]:
+            - /url: /targets
+            - img [ref=e28]
+            - generic [ref=e32]: Attack Surface
+          - link "Intelligence" [ref=e36] [cursor=pointer]:
+            - /url: /findings
+            - img [ref=e37]
+            - generic [ref=e39]: Intelligence
+          - link "Report Builder" [ref=e40] [cursor=pointer]:
+            - /url: /reports
+            - img [ref=e41]
+            - generic [ref=e44]: Report Builder
+      - generic [ref=e45]:
+        - heading "Platform" [level=3] [ref=e46]
+        - link "Settings" [ref=e48] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e49]
+          - generic [ref=e52]: Settings
+    - generic [ref=e53]:
+      - generic [ref=e55]:
+        - generic [ref=e56]: RESOURCE LOAD
+        - generic [ref=e57]: 12.4%
+      - button [ref=e59]:
+        - img [ref=e60]
+  - generic [ref=e63]:
+    - banner [ref=e64]:
+      - generic [ref=e66]:
+        - generic [ref=e67]: PROJECTS
+        - img [ref=e68]
+        - generic [ref=e70]: Main Alpha-01
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - img [ref=e73]
+          - textbox "Search commands..." [ref=e76]
+          - generic [ref=e77]:
+            - generic [ref=e78]: ⌘
+            - generic [ref=e79]: K
+        - generic [ref=e80]:
+          - button [ref=e81]:
+            - img [ref=e82]
+          - button [ref=e88]:
+            - img [ref=e89]
+    - main [ref=e94]:
+      - generic [ref=e196]:
+        - generic [ref=e197]:
+          - generic [ref=e198]:
+            - img [ref=e200]
+            - generic [ref=e202]:
+              - heading "Live Engine Monitor" [level=1] [ref=e203]
+              - generic [ref=e204]:
+                - generic [ref=e205]: Test PHP Vulnweb
+                - generic [ref=e207]: Streaming Core Data...
+          - button "Terminate Engine" [ref=e209] [cursor=pointer]:
+            - img [ref=e210]
+            - text: Terminate Engine
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - img [ref=e216]
+                - heading "Pipeline Orchestration" [level=2] [ref=e219]
+              - generic [ref=e220]:
+                - generic [ref=e221]:
+                  - generic [ref=e224]: "1"
+                  - generic [ref=e225]:
+                    - generic [ref=e226]: Passive Reconnaissance
+                    - generic [ref=e227]: Executing...
+                - generic [ref=e228]:
+                  - generic [ref=e231]: "2"
+                  - generic [ref=e232]:
+                    - generic [ref=e233]: Active Discovery & Crawling
+                    - generic [ref=e234]: Pending Deployment
+                - generic [ref=e235]:
+                  - generic [ref=e238]: "3"
+                  - generic [ref=e239]:
+                    - generic [ref=e240]: Vulnerability Analysis
+                    - generic [ref=e241]: Pending Deployment
+                - generic [ref=e242]:
+                  - generic [ref=e244]: "4"
+                  - generic [ref=e245]:
+                    - generic [ref=e246]: Deep Contextual Probing
+                    - generic [ref=e247]: Pending Deployment
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - img [ref=e251]
+                - generic [ref=e257]: Attack Surface Graph
+              - generic [ref=e258]: LIVE_COMPUTE
+          - generic [ref=e260]:
+            - generic [ref=e264]:
+              - generic [ref=e265]:
+                - generic [ref=e266]:
+                  - img [ref=e267]
+                  - generic [ref=e269]: LIVE ACTIVITY STREAM
+                - generic [ref=e271]: "[STREAMING]"
+              - generic [ref=e273]:
+                - generic [ref=e274]:
+                  - generic [ref=e275]: "[16:41:42.608Z]"
+                  - generic [ref=e276]:
+                    - generic [ref=e278]: complete
+                    - generic [ref=e279]: "[SYS] Scan #1 Initialized."
+                - generic [ref=e280]:
+                  - generic [ref=e281]: "[16:41:43.608Z]"
+                  - generic [ref=e282]:
+                    - generic [ref=e284]: recon
+                    - generic [ref=e285]: "[NET] Establishing handshake with target..."
+            - generic [ref=e286]:
+              - generic [ref=e287]:
+                - img [ref=e289]
+                - generic [ref=e292]:
+                  - generic [ref=e293]: Proc Usage
+                  - generic [ref=e294]: 42.8%
+              - generic [ref=e295]:
+                - img [ref=e297]
+                - generic [ref=e302]:
+                  - generic [ref=e303]: Throughput
+                  - generic [ref=e304]: 1.2k req/s
+            - generic [ref=e305]:
+              - generic [ref=e306]:
+                - img [ref=e308]
+                - generic [ref=e312]:
+                  - heading "Intelligence Sync" [level=3] [ref=e313]
+                  - paragraph [ref=e314]: Streaming findings to Secure PostgreSQL Cluster.
+              - button "Storage Controller" [ref=e315] [cursor=pointer]
