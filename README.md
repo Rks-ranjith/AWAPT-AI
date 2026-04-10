@@ -468,16 +468,6 @@ pytest --cov=awap --cov-report=html tests/
 
 ---
 
-## 30-Day Build Roadmap
-
-**Week 1 (Days 1–7):** Monorepo setup, PostgreSQL schema, JWT auth, Target Input Manager, Recon Engine (DNS + crt.sh + Shodan), Playwright crawler v1.
-
-**Week 2 (Days 8–14):** Payload Engine + mutation layer, parameter discovery, core attack modules (SQLi, XSS, CMDi, SSRF, XXE, CORS), Response Analysis Engine.
-
-**Week 3 (Days 15–21):** BERT vuln classifier, CVSS estimator, Isolation Forest + LSTM anomaly detection, LLM API integration (payload gen + report writing), Attack Graph Engine.
-
-**Week 4 (Days 22–30):** React dashboard (all 6 screens), WebSocket live scan streaming, PDF/DOCX/JSON reporting, security hardening, E2E tests against DVWA/WebGoat/Juice Shop, Docker Compose + Helm chart, release v1.0.0.
-
 ---
 
 ## Legal
