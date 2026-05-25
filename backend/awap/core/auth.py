@@ -12,7 +12,7 @@ from awap.models.user import User
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
-SECRET_KEY = settings.SECRET_KEY if hasattr(settings, "SECRET_KEY") else "AWAP_AI_SUPER_SECRET_KEY_CHANGE_ME"
+SECRET_KEY = settings.SECRET_KEY or "unset-configure-SECRET_KEY-in-env"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 

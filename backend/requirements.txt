@@ -2,6 +2,7 @@
 
 fastapi
 uvicorn
+websockets
 sqlalchemy[asyncio]
 alembic
 psycopg[binary]
@@ -24,3 +25,7 @@ pycryptodome
 networkx
 psycopg2-binary
 openai
+anthropic
+dnspython
+aiohttp
+reportlab

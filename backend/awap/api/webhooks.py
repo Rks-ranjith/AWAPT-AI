@@ -1,54 +1,66 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from awap.core.database import get_db
+from awap.core.config import settings
 from awap.models.target import Target
 from awap.models.scan import Scan
-from awap.engines.worker import execute_scan
+from awap.engines.worker import run_scope_task
 from typing import Optional
-import secrets
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
-# Simple API Key validation for MVP
-# In production, these would be stored in the DB
-VALID_API_KEYS = ["AWAP_DEMO_CI_CD_KEY_2026"]
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None)):
-    if x_api_key not in VALID_API_KEYS:
+    keys = settings.webhook_key_list
+    if not keys:
+        raise HTTPException(
+            status_code=503,
+            detail="Webhook API keys not configured. Set WEBHOOK_API_KEYS in environment.",
+        )
+    if not x_api_key or x_api_key not in keys:
         raise HTTPException(status_code=403, detail="Invalid API Key")
     return x_api_key
+
 
 @router.post("/trigger-scan")
 async def trigger_cicd_scan(
     target_url: str,
     project_name: str = "CI-CD-Automation",
-    db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key)
+    authorized: bool = False,
+    db: AsyncSession = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
 ):
     """
     Triggers an autonomous scan via a CI/CD webhook call.
-    Automatically indexes the target if it doesn't exist.
+    Target must already exist with authorized=True unless authorized=true is passed explicitly.
     """
-    # Check if target exists
-    target = db.query(Target).filter(Target.base_url == target_url).first()
+    result = await db.execute(select(Target).filter(Target.domain == target_url))
+    target = result.scalar()
     if not target:
-        target = Target(base_url=target_url, name=project_name)
+        if not authorized:
+            raise HTTPException(
+                status_code=403,
+                detail="Target not found. Create and authorize the target in AWAPT-AI first, "
+                "or pass authorized=true only for pre-approved automation scopes.",
+            )
+        target = Target(domain=target_url, authorized=True)
         db.add(target)
-        db.commit()
-        db.refresh(target)
-        
-    # Create Scan
-    new_scan = Scan(target_id=target.id, status="PENDING")
+        await db.commit()
+        await db.refresh(target)
+    elif not target.authorized:
+        raise HTTPException(status_code=403, detail="Target exists but is not authorized for scanning")
+
+    new_scan = Scan(target_id=target.id, state="CREATED")
     db.add(new_scan)
-    db.commit()
-    db.refresh(new_scan)
-    
-    # Dispatch to Celery
-    execute_scan.delay(new_scan.id)
-    
+    await db.commit()
+    await db.refresh(new_scan)
+
+    run_scope_task.delay(str(new_scan.id), str(target.id))
+
     return {
         "status": "scan_dispatched",
         "scan_id": new_scan.id,
         "target_id": target.id,
-        "mode": "CI/CD Pipeline"
+        "mode": "CI/CD Pipeline",
     }

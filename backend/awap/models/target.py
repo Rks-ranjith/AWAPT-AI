@@ -1,23 +1,19 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
-import enum
+import uuid
 from datetime import datetime
 from .base import Base
-
-class TargetStatus(str, enum.Enum):
-    ACTIVE = "active"
-    PAUSED = "paused"
-    ARCHIVED = "archived"
 
 class Target(Base):
     __tablename__ = "targets"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    base_url = Column(String, unique=True, index=True, nullable=False)
-    status = Column(Enum(TargetStatus), default=TargetStatus.ACTIVE)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    domain = Column(String, nullable=False)
+    scope_rules = Column(JSONB, nullable=False, default=list)
+    authorized = Column(Boolean, nullable=False, default=False)
+    authorized_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     
     # Relationships
-    scans = relationship("Scan", back_populates="target")
-    findings = relationship("Finding", back_populates="target")
+    scans = relationship("Scan", back_populates="target", cascade="all, delete-orphan")

@@ -1,0 +1,851 @@
+Posted on 20 Feb 2026 | CC-BY 4.0 | https://doi.org/10.36227/techrxiv.177162955.55068299/v1 | e-Prints posted on TechRxiv are preliminary reports that are not peer reviewed. They should not b...An AI-Powered Tool For Automated Web Application Penetration
+Testing using PPO
+Anirudh Patki1, Gopal Tayade1, Prathamesh Jadhav1, and Alka Kumbhar1
+1Aliation not available
+February 20, 2026
+1An AI-Powered Tool For  Automated Web 
+Application  Penetration  Testing  using  PPO  
+Anirudh  Patki,  Gopal  Tayade,  Prathamesh  Jadhav,  Prof. Alka  Kumbhar  
+Department  Of Computer  Science  and Engineering  
+Genba  Sopanrao  Moze  College  of Engineering,  Pune (Affiliated  to Savitribai  Phule  Pune  University)  
+{anirudhpatki2811,  tayadegopal05,  prathamesh1470,  alka.kumbhar}@gmail.com  
+ 
+Abstract—The growing complexity and scale of 
+modern web applications have rendered 
+traditional, manually driven penetration testing 
+approaches increasingly inadequate. In response, 
+the research community has explored a wide 
+range of Artificial Intelligence (AI) te chniques to 
+automate and enhance vulnerability discovery 
+and exploitation processes. This paper presents a 
+comprehensive survey of AI -driven penetration 
+testing methodologies, with a particular focus on 
+web application security and the OWASP  Top 10 
+vulnera bility categories. The survey 
+systematically reviews the evolution of the field 
+from early machine learning –based vulnerability 
+classifiers to reinforcement learning –driven 
+attack path optimization, and more recent large 
+language  model–based  reasoning  systems capable 
+of high -level planning and tool orchestration. 
+Existing approaches are analyzed and  
+categorized based on their strategic depth, 
+decision -making capabilities, validation 
+mechanisms, and privacy considerations. 
+Through comparative analysis, this survey 
+highlights key strengths and limitations of  
+current frameworks, including challenges related 
+to scalability, false positive reduction, data 
+confidentiality, and real -world adaptability. 
+Finally, the paper identifies open research 
+challenges and outl ines future directions for 
+developing reliable, privacy -aware, and 
+trustworthy autonomous penetration testing 
+systems.  
+Keywords —Artificial  Intelligence  in 
+Cybersecurity, Automated Penetration Testing, 
+Web Application Security, Reinforcement 
+Learning in Sec urity Testing, Large Language 
+Models, Vulnerability Assessment, OWASP Top 
+10, False Positive Reduction.  
+ 
+I. INTRODUCTION  
+The security of web applications has become a 
+critical concern as modern software systems  
+continue to grow in scale, complexity, and 
+interconnectedness.  Web  applications  now form  the backbone of essential services across domains such 
+as finance, healthcare, e -commerce, and government 
+infrastructure, making them high -value targets for 
+cyber attackers.  At the same time, the pace at which 
+new vulnerabilities are discovered has significant ly 
+outstripped the capacity of traditional, manually 
+driven security assessment techniques. This 
+imbalance has intensified the need for more 
+intelligent, scalable, and adaptive approaches to 
+penetration testing.  
+Penetration testing plays a central role in identifying 
+exploitable weaknesses within applications before 
+they can be leveraged by malicious actors. 
+Conventional penetration testing workflows rely 
+heavily on human expertise, predefined scripts, and 
+determi nistic scanning tools. While these methods 
+remain effective for identifying well -known 
+vulnerability patterns, they struggle to adapt to 
+dynamic application logic, complex execution paths, 
+and rapidly evolving attack techniques. Moreover, 
+manual testing is  time-intensive, costly, and difficult 
+to scale across large or frequently changing systems, 
+limiting its practicality in modern continuous 
+deployment environments.  
+To address  these  limitations,  the research  community 
+has increasingly explored the applicat ion of  
+Artificial Intelligence (AI) to automate and enhance 
+various stages of the penetration testing lifecycle. 
+Early research focused on using machine learning 
+techniques to improve vulnerability classification  
+and prioritization,  enabling  scanners  to move beyond 
+simple  signature -based  detection.  Subsequent  studies 
+introduced  reinforcement  learning  models  that frame 
+penetration testing as a sequential decision -making 
+problem, allowing agents to learn efficient attack 
+paths through interaction with target environments. 
+More recently, large language models have emerged 
+as powerful tools for high -level reasoning, natural 
+language understanding, and automated tool 
+orchestration,  enabling  systems  to emulate  aspects  of 
+human tester intuition and strategic planni ng. 
+Despite this rapid progress, the landscape of AI - 
+driven penetration testing remains fragmented. 
+Existing  approaches  often specialize  in a single  paradigm —such as classification -based machine 
+learning, reinforcement learning –based path 
+optimization,  or language  model –driven  reasoning — 
+without providing a unified perspective on their 
+relative strengths, limitations, and applicability. 
+Additionally, critical challenges persist across the 
+literature, including high false positive  rates, limited 
+generalization across environments, scalability 
+constraints, and concerns regarding data privacy 
+when cloud -based intelligence is employed. These 
+issues hinder the practical adoption of fully 
+autonomous penetration testing systems in real - 
+world settings.  
+In this context, a systematic survey of AI -based 
+penetration testing techniques is both timely and 
+necessary. By consolidating and analyzing prior 
+research, such a survey can clarify how the field has 
+evolved, identify dominant research tre nds, and 
+highlight unresolved challenges that warrant further 
+investigation. This paper aims to provide a  
+structured  and comprehensive  overview  of AI-driven 
+approaches to automated web application  
+penetration testing, with particular emphasis on 
+vulnerabilities  defined  in the OWASP  Top 10. Rather 
+than introducing new methodologies, the focus is 
+placed on synthesizing existing work, categorizing 
+approaches based on their underlying intelligence 
+model s and validation strategies, and outlining open 
+research directions for the development of reliable, 
+privacy -aware, and trustworthy automated security 
+assessment systems.  
+ 
+II. TAXONOMY  OF AI-DRIVEN  PENETRATION 
+TESTING  APPROACHES  
+A meaningful survey must not on ly summarize prior 
+work but also organize it in a way that reveals 
+underlying research patterns and conceptual 
+differences. In the domain of AI -driven penetration 
+testing, existing studies vary widely in their 
+objectives, levels of autonomy, and intelligen ce 
+models. To systematically analyze this diverse body 
+of literature, this section introduces a taxonomy that 
+classifies automated penetration testing approaches 
+based on the role played by artificial intelligence 
+within the testing lifecycle. Rather than focusing on 
+specific tools or implementations, the taxonomy 
+emphasizes conceptual distinctions that recur across 
+published research.  
+Broadly, AI -based penetration testing approaches  
+can be grouped into four primary categories:  
+machine learning –assisted vul nerability detection, 
+reinforcement learning –based decision -making 
+systems, large language model –driven reasoning 
+frameworks, and hybrid architectures that combine 
+multiple  AI paradigms.  This classification  provides  a structured lens through which existin g work can be 
+compared and evaluated.  
+ 
+A. Machine Learning –Assisted Vulnerability 
+Detection  
+The earliest applications of  AI in penetration testing 
+primarily leveraged classical machine learning 
+techniques to augment traditional vulnerability 
+scanning processes. In this category, machine 
+learning models are typically employed as  
+supporting components rather than autonomous 
+decision -makers. Common use cases include 
+vulnerability classification, prioritization, and  
+pattern recognition within scan results.  
+Studies in this group often rely on supervised or 
+semi -supervised learning algorithms trained on 
+historical vulnerability dat asets, configuration files, 
+or network traffic features. The primary objective is 
+to improve detection accuracy beyond signature - 
+based approaches by identifying statistical 
+correlations that indicate the presence of security 
+weaknesses. While such methods  demonstrate 
+measurable improvements in identifying known 
+vulnerability patterns, they remain tightly coupled to 
+predefined feature sets and labeled data, limiting 
+their adaptability to novel attack surfaces or 
+previously unseen exploitation techniques.  
+As a result, machine learning –assisted systems in  
+this category are best characterized as enhancements 
+to human -driven workflows, rather than fully 
+autonomous penetration testing solutions.  
+ 
+B. Reinforcement Learning –Based Penetration 
+Testing  Agents  
+A more adva nced class of research applies 
+reinforcement learning to model penetration testing 
+as a sequential decision -making problem. In these 
+approaches, an agent interacts with a target 
+environment  by selecting  actions —such as scanning, 
+probing, or exploitation attempts —and receives 
+feedback in the form of rewards or penalties. Over 
+time, the agent learns strategies that maximize 
+cumulative rewards, often corresponding to 
+successful system compromise or efficient attack 
+path dis covery.  
+Reinforcement learning –based systems shift the 
+focus from isolated vulnerability detection to 
+strategic attack path optimization. This paradigm 
+enables automated exploration of complex 
+environments and adaptive behavior in response to 
+partial obser vations. However, many studies within 
+this category  rely on simplified  state representations, 
+constrained action spaces, or simulated  
+environments  to ensure  tractable  training.  These  design choices, while necessary for feasibility,  can 
+limit real -world transferability and scalability.  
+Consequently, reinforcement learning approaches 
+excel at modeling attack sequencing but often 
+struggle with contextual understanding, semantic 
+interpretation of responses, and robustness across 
+heterog eneous application architectures.  
+ 
+C. Large Language Model –Driven Reasoning 
+Systems  
+Recent research has introduced large language 
+models (LLMs) into the penetration testing domain, 
+enabling systems to perform higher -level reasoning, 
+interpret unstructured data, and orchestrate complex 
+tool interactions.  Unlike  traditional  machine  learning  
+or reinforcement learning models, LLMs leverage 
+extensive pretraining on natural language and code 
+corpora, allowing them to generalize across diverse 
+technologies and attack scenarios.  
+In penetration testing workflows, LLM -based 
+systems are typically use d for tasks such as 
+interpreting scan outputs, generating exploit 
+payloads, decomposing high -level objectives into 
+actionable steps, and producing human -readable 
+explanations. These capabilities allow such systems 
+to emulate aspects of expert tester intuit ion and 
+decision -making. However, LLM -driven approaches 
+often depend on external execution tools for 
+validation and may introduce concerns related to 
+reliability, hallucinated outputs, and data privacy — 
+particularly when cloud -hosted models are  
+employed.  
+As a result, LLM -based systems are best viewed as 
+reasoning and coordination engines, rather than 
+standalone exploitation mechanisms.  
+ 
+D. Hybrid  and Multi -Paradigm  Architectures  
+An emerging trend in the literature involves hybrid 
+architectures that combine mul tiple AI paradigms to 
+address the limitations of individual approaches. 
+These systems typically integrate machine learning 
+for pattern recognition, reinforcement learning for 
+strategic decision -making, and language models for 
+contextual reasoning and inter pretation.  
+Hybrid approaches aim to balance adaptability, 
+efficiency, and accuracy by distributing 
+responsibilities across specialized components. For 
+example, reinforcement learning agents may handle 
+action sequencing, while language models provide 
+semant ic guidance and machine learning classifiers 
+assist with validation or prioritization. Although  
+such architectures  demonstrate  promising  conceptual 
+advantages,  they also introduce  increased  system  complexity, orchestration challenges, and evaluation 
+difficulties.  
+This category represents an important direction for 
+future research, as it reflects growing recognition  
+that no single AI paradigm is sufficient to fully 
+automate the penetration testing pr ocess in realistic 
+environments.  
+ 
+E. Summary  of Taxonomy  
+The taxonomy presented in this section highlights a 
+clear progression in AI -driven penetration testing 
+research —from task -level automation toward 
+increasingly  autonomous  and intelligent  systems.  By 
+categorizing prior work based on the functional role 
+of AI, this classification provides a foundation for 
+the detailed literature analysis presented in the 
+following sections. It also enables clearer 
+identification of open challenges related to 
+scalability, re liability, validation, and practical 
+deployment.  
+ 
+III. PROPOSED MODEL AND  
+ARCHITECTURAL FRAMEWORK  
+ 
+To address the strategy -knowledge gap and the  
+privacy concerns identified in existing literature, this  
+research proposes a decoupled, three -tier hybrid  
+architecture. Unlike monolithic systems, this  
+framework separates high -level cognitive reasoning  
+from low -level execution and validation, creating  a  
+scalable "System of Systems" that emulates the  
+multi -phased workflow of an expert human  
+penetration tester.  
+  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+IV. MACHINE LEARNING –BASED 
+APPROACHES TO AUTOMATED  
+PENETRATION TESTING  
+The earliest attempts to incorporate artificial 
+intelligence into penetration testing primarily relied 
+on classical machine learning techniques to 
+enhance specific stages of the security assessment 
+process. Rather  than seeking  full autonomy,  these  
+approach es focused on improving the efficiency 
+and accuracy of traditional penetration testing 
+workflows by augmenting existing tools with data -
+driven decision support.  As such, machine learning 
+in this context is generally used as an assistive 
+mechanism for vulne rability detection, 
+classification, and prioritization.  
+Most machine learning –based penetration testing 
+systems operate within a supervised or semi - 
+supervised learning paradigm. Training data is 
+typically derived from historical vulnerability 
+reports, net work configurations, server fingerprints, 
+or application metadata. By learning statistical 
+patterns associated with known weaknesses, these 
+models aim to identify potential vulnerabilities 
+more effectively than rule -based or signature -
+driven scanners. This  represents a shift from 
+deterministic matching toward probabilistic 
+inference, allowing systems to capture subtle 
+correlations that static  rules may overlook.  
+A representative example of this category involves 
+machine learning –enhanced vulnerability scann ers 
+that analyze  server  responses,  configuration  
+banners, or  HTTP  headers  to infer the likely  
+hood of 
+misconfigurations or outdated software components. 
+Such systems demonstrate improved recall when 
+compared to conventional scanning modes, 
+particularly in environments where version 
+information is obfuscated or incomplete. Other studies 
+have focused on narr owly scoped vulnerability 
+classes, such as unrestricted file upload or input 
+validation flaws, where machine learning is used to 
+guide payload generation or mutation strategies in 
+order to bypass defensive filters.  
+Despite  their effectiveness  in well-defin ed scenarios, 
+machine learning –based approaches exhibit several 
+inherent limitations. Their reliance on labeled 
+datasets restricts adaptability to emerging 
+vulnerability types and previously unseen attack 
+vectors. Feature engineering remains a critical 
+dependency, often requiring domain expertise to 
+ensure meaningful representations of application 
+behavior. Furthermore, these systems typically 
+operate in isolation, lacking awareness of broader 
+attack context or multi -step exploitation paths. As a 
+result, de cision -making remains largely static and 
+does not evolve dynamically during an assessment.  
+Another important limitation lies in validation and 
+reliability. While machine learning classifiers can predict the likelihood of vulnerabilities, they do not 
+inhere ntly provide confirmation through exploit 
+execution or state change verification. This can 
+contribute to elevated false positive rates, particularly 
+in complex or highly customized applications. 
+Consequently, outputs generated by machine 
+learning –based too ls often require manual review by 
+human analysts, limiting their ability to reduce 
+operational workload in practice.  
+In summary, machine learning –based penetration 
+testing approaches represent a foundational stage in 
+the evolution  of AI-driven  security  assessment.  They 
+demonstrate  that data-driven  techniques  can enhance 
+vulnerability discovery beyond rule -based scanning, 
+but they remain fundamentally constrained to task - 
+level augmentation. These limitations motivated 
+subsequent research into more adaptive and 
+autonomous paradigms, most notably reinforcement 
+learning,  which  seeks  to model  penetration  testing  as 
+a sequential and strategic decision -making process.  
+ 
+V. REINFORCEMENT LEARNING –BASED 
+PENETRATION TESTING APPROACHES  
+The limitations of classical machin e learning 
+approaches in capturing multi -step attack logic led 
+researchers to explore reinforcement learning as a 
+more suitable paradigm for automated penetration 
+testing. Unlike supervised learning models that 
+operate  on static inputs,  reinforcement  learn ing 
+enables an agent to interact with an environment, 
+observe outcomes, and adapt its behavior over time. 
+This shift allows penetration testing to be modeled  
+as a sequential decision -making process, closely 
+reflecting the iterative and exploratory nature of 
+human -driven security assessments.  
+In reinforcement learning –based penetration testing, 
+the target system is typically represented as an 
+environment compose d of states, actions, and 
+rewards. States may encode partial knowledge about 
+the network topology, discovered services, 
+application responses, or previously executed 
+actions. Actions correspond to testing operations 
+such as scanning,  probing,  or attempting  exploitation 
+steps. Rewards are designed to encourage progress 
+toward defined objectives, such as expanding attack 
+surface visibility or achieving deeper system 
+compromise. Through repeated interactions, the 
+agent learns policies that prioritize efficient  and 
+effective attack paths.  
+Early research in this category often modeled 
+penetration  testing  using  Markov  Decision  Processes 
+or Partially Observable Markov Decision Processes, 
+reflecting the inherent uncertainty and incomplete 
+information  available  durin g real-world  assessments. 
+These formulations enabled agents to reason under 
+uncertainty  and update  strategies as  new information 
+became available. Subsequent studies applied value - 
+based and policy -based reinforcement learning algorithms to identify optima l attack sequences  
+while minimizing redundant or costly actions.  
+One of the key strengths of reinforcement learning 
+approaches lies in their ability to optimize attack 
+paths rather than merely identifying isolated 
+vulnerabilities. By learning from experien ce, agents 
+can adapt their strategies when encountering 
+defensive  mechanisms, alternative  configurations, 
+or partial failures. This adaptability distinguishes 
+reinforcement learning systems from static 
+automation pipelines and enables more realistic 
+modeli ng of adversarial behavior.  
+However, reinforcement learning –based 
+penetration testing also introduces significant 
+challenges. State - space explosion remains a major 
+concern, particularly in complex web applications 
+with numerous endpoints, parameters, and 
+execution paths. To maintain tractability, many 
+studies rely on simplified  environments,  abstracted  
+action  spaces,  or simulated testbeds. While these 
+assumptions facilitate training, they often limit the 
+generalizability of learned policies to real -world 
+systems. Additionally, reward function design 
+plays a critical role in agent behavior, and poorly 
+calibrated  rewards can  lead to inefficient  
+exploration or unintended action patterns.  
+Another limitation involves semantic understandi ng. 
+Reinforcement learning agents typically operate on 
+structured state representations and numerical 
+rewards, lacking the contextual reasoning needed to 
+interpret unstructured responses such as HTML 
+content, error messages, or application logic flows. 
+As a result, these agents may struggle to identify 
+subtle vulnerability indicators or adapt to highly 
+customized application behaviors without extensive 
+manual modeling.  
+Overall, reinforcement learning represents a 
+significant advancement toward autonomous 
+penetration testing by enabling adaptive, strategy - 
+driven decision -making. Nevertheless, the practical 
+deployment of such systems remains constrained by 
+scalability,  training  complexity,  and limited  semantic 
+awareness. These challenges have motivated recent  
+research into combining reinforcement learning with 
+higher -level reasoning mechanisms, particularly 
+large language models.  
+ 
+VI. LARGE LANGUAGE MODELS IN 
+AUTOMATED PENETRATION TESTING  
+The recent emergence of large language models 
+(LLMs) has introduced a new paradigm in  
+automated  penetration  testing  by enabling  systems  to 
+perform higher -level reasoning, contextual 
+interpretation, and natural language –based 
+interaction with security tools . Unlike traditional 
+machine learning or reinforcement learning models, 
+LLMs are trained on vast corpora of text and source 
+code, allowing them to generalize across programming languages, frameworks, and application 
+architectures. This capability has posit ioned LLMs as 
+promising components for addressing  the semantic  
+and cognitive  gaps observed in earlier AI -driven 
+penetration testing approaches.  
+In the context of penetration testing, LLMs are 
+primarily employed as reasoning and coordination 
+engines rather than direct exploitation mechanisms. 
+Research in this area demonstrates the use of LLMs to 
+interpret reconnaissance outputs, generate exploit 
+hypotheses, decompose high -level security objectives 
+into actionable steps, and translate  abstract attack 
+strategi es into executable commands. These 
+capabilities enable automated systems to emulate 
+aspects of human tester intuition, particularly in 
+scenarios involving complex application logic or 
+unstructured response data.  
+One notable advantage of LLM -based approache s is 
+their ability to process and reason over unstructured 
+information,  such as HTML  content,  error  messages, 
+configuration files, and log outputs. This contrasts 
+with reinforcement  learning  agents,  which  typically  
+rely on structured state representations  and 
+numerical features. By leveraging natural language 
+understanding, LLM -driven systems can identify 
+subtle indicators of vulnerabilities that may not be 
+explicitly encoded in structured data, thereby 
+improving  situational  awareness  during  assessments.  
+Despite  these  strengths,  the integration  of LLMs  into 
+penetration testing workflows introduces several 
+challenges.  Reliability  remains  a primary  concern,  as 
+language models may generate plausible but 
+incorrect outputs, particularly in the absence of 
+explicit verification mechanisms. This phenomenon 
+can lead to ineffective or misleading attack 
+suggestions if not carefully controlled.  Additionally, 
+many exist ing LLM -based systems rely on cloud - 
+hosted models, raising concerns related to data 
+confidentiality,  regulatory  compliance,  and exposure 
+of sensitive organizational information during  
+testing activities.  
+Another limitation lies in execution and validation . 
+While LLMs excel at reasoning and instruction 
+generation, they typically depend on external tools  
+to perform actual scanning and exploitation tasks. 
+Without robust feedback loops and validation 
+strategies,  LLM -driven  systems risk  producing  high- 
+level in sights that lack empirical confirmation. As a 
+result, many studies emphasize the importance of 
+integrating LLM reasoning with complementary 
+mechanisms for action execution and result 
+verification.  
+In summary, large language models represent a 
+significant advancement in the automation of 
+penetration testing by introducing semantic 
+reasoning and flexible decision -making capabilities. 
+However, their effective use requires careful 
+consideration of relia bility, privacy, and validation challenges. These observations have prompted 
+growing  interest  in hybrid  architectures  that 
+combine LLM -based reasoning with reinforcement 
+learning and traditional validation techniques, 
+which are discussed in the following s ection.  
+ 
+ 
+VII. VALIDATION STRAT EGIES AND FALSE 
+POSITIVE REDUCTION  
+ 
+A persistent challenge across automated 
+penetration testing systems is the prevalence of 
+false positives, which  can significantly  reduce  the 
+practical  utility  of security assessment tools. False  
+positives increase analyst workload, contribute to 
+alert fatigue, and undermine trust in automated 
+solutions. As AI - driven penetration testing 
+approaches become more autonomous,  the need 
+for reliable  validation  mechanisms has become a 
+central concern in the research literature.  
+ 
+Early automated systems largely relied on heuristic - 
+based or signature -driven validation techniques, 
+which were often unable to distinguish between 
+theoretical vulnerabilities and exploi table 
+weaknesses in real -world environments. Machine 
+learning –based classifiers improved detection 
+sensitivity but did not inherently provide 
+confirmation of exploitability. As a result, many 
+studies report high detection rates accompanied by 
+elevated fals e positive levels, necessitating manual 
+verification by security professionals.  
+ 
+To address these limitations, subsequent research 
+introduced dynamic validation strategies that 
+emphasize observable system state changes as 
+evidence of successful exploitatio n. Dynamic 
+application security testing (DAST) techniques, for 
+example, attempt to verify vulnerabilities by 
+executing test payloads and analyzing application 
+responses for measurable effects. Such approaches 
+reduce reliance on probabilistic inference and 
+provide stronger empirical assurance, particularly  
+for injection -based and logic -based vulnerabilities.  
+ 
+More recent studies have explored the integration of 
+static and dynamic validation techniques to improve 
+detection reliability. Static application secu rity 
+testing (SAST) enables analysis of source code, 
+bytecode, or configuration artifacts to identify 
+potential logic flaws, insecure data flows, or 
+misconfigurations. When combined with dynamic 
+validation, static analysis can help filter unlikely 
+vulnerab ility candidates while dynamic testing 
+confirms exploit feasibility. This complementary 
+relationship has been widely recognized as a 
+promising direction for reducing false positives in 
+automated security assessments.  
+In AI -driven penetration testing systems, validation strategies are increasingly viewed as integral 
+components rather than post -processing steps. 
+Reinforcement learning agents and language  model – 
+based reasoning systems benefit from reliable 
+feedback signa ls that reflect genuine security 
+outcomes. Without accurate validation, learning 
+agents may reinforce ineffective behaviors or 
+prioritize misleading attack paths. Consequently, 
+several studies emphasize the importance of 
+incorporating verification signals into the decision - 
+making loop to guide exploration and policy 
+refinement.  
+Despite these advances, validation remains an open 
+research challenge. Dynamic testing can introduce 
+performance overhead, while static analysis may be 
+limited by incomplete code a ccess or obfuscation. 
+Additionally, the diversity of modern web 
+application architectures complicates the design of 
+universally applicable validation mechanisms. 
+Addressing these challenges requires careful 
+balancing of accuracy, efficiency, and scalabilit y, 
+particularly in large or continuously evolving 
+systems.  
+ 
+Overall, validation and false positive reduction 
+represent foundational requirements for trustworthy 
+automated penetration testing. The effectiveness of 
+AI-driven systems depends not only on their  ability 
+to identify potential vulnerabilities but also on their 
+capacity to provide verifiable and actionable results. 
+These considerations motivate ongoing research into 
+hybrid validation models and feedback -driven 
+learning architectures.  
+ 
+VIII. COMPARATIVE ANALYSIS OF AI -
+DRIVEN PENETRATION TESTING  
+FRAMEWORKS  
+A core objective of a survey paper is to enable 
+readers to compare existing research efforts along 
+meaningful dimensions. In the context of AI -driven 
+penetration testing, published frameworks differ 
+signif icantly in terms of intelligence models, 
+decision -making depth, validation strategies, and 
+deployment assumptions. This section presents a 
+comparative analysis of representative approaches 
+discussed in earlier sections, highlighting key design 
+trends and t rade-offs without favoring any specific 
+implementation.  
+The comparison focuses on four primary dimensions 
+that recur across the literature: the role of artificial 
+intelligence, the level of strategic autonomy, the 
+approach to vulnerability validation, and privacy 
+considerations related to model deployment. These 
+dimensions  are particularly  relevant  for assessing  the 
+practicality and trustworthiness of automated 
+penetration testing systems in real -world 
+environments.  
+Early machine learning –based approaches t ypically 
+emphasize vulnerability classification and prioritization, offering limited autonomy and 
+relying on human analysts for interpretation and 
+validation. Reinforcement learning –based 
+frameworks  introduce strategic sequencing of 
+actions but often depen d on abstracted 
+environments and simplified state representations. 
+More recent large language model –based systems 
+contribute high -level  reasoning  and flexibility  
+but raise  concerns  regarding reliability and data 
+confidentialit y, especially when cloud -hosted 
+models are employed. Hybrid approaches attempt 
+to mitigate these limitations  by combining  
+complementary  paradigms, though they introduce 
+additional system complexity.  
+Table I summarizes key characteristics of 
+representative AI-driven penetration testing 
+approaches reported in the literature. Rather than 
+evaluating performance metrics, the table  
+emphasizes architectural and methodological 
+distinctions that influence applicability and  
+adoption.  
+ 
+ 
+ 
+Table  I: Comparative  Overview  of AI-Driven 
+Penetration Testing Approaches  
+ 
+IX. OPEN RESEARCH CHALLENGES AND 
+FUTURE DIRECTIONS  
+Despite significant progress in applying artificial 
+intelligence to automate penetration testing, 
+existing research reveals several unresolved  
+challenges that limit the widespread adoption of 
+fully autonomous security assessment systems. 
+Identifying these challenges is a central objective 
+of this survey, as it helps clarify where future 
+research efforts should be directed.  
+ 
+A. Scalability  and State -Space  Complexity  
+One of the most persistent challenges across AI - 
+driven penetration testing approaches is scalability. 
+Web applications often expose large and dynamic 
+attack surfaces, including numerous endpoints, 
+parameters, and execution paths. Reinfor cement 
+learning –based systems, in particular, face state - 
+space explosion as the complexity of target 
+environments increases. While abstraction and 
+environment simplification are commonly used to address this issue, such techniques can reduce 
+fidelity and limit applicability to real -world systems. 
+Future research must explore more efficient state 
+representations  and adaptive  exploration  strategies  
+that preserve realism without incurring prohibitive 
+computational costs.  
+ 
+B. Reliability  and False  Positive  Control  
+False positives remain a major barrier to the  
+practical deployment of automated penetration 
+testing tools. Although machine learning classifiers 
+and reasoning models can identify potential 
+vulnerabilities, ensuring that reported findings a re 
+exploitable and actionable remains difficult. Many 
+existing systems lack robust, standardized validation 
+mechanisms, resulting in noisy outputs that require 
+extensive human review. Improving reliability 
+through tighter integration of validation feedback  
+and evidence -based confirmation remains a key 
+research direction.  
+ 
+C. Generalization Across Heterogeneous 
+Environments  
+A common  limitation  in the literature  is the difficulty 
+of transferring learned behaviors or reasoning 
+strategies across different applications, frameworks, 
+and technology stacks. AI -driven systems often 
+perform well within constrained or familiar 
+environments but struggle when exposed to novel 
+confi gurations or custom application logic. 
+Achieving stronger generalization requires models 
+that can adapt to diverse contexts without extensive 
+retraining  or manual  tuning,  a challenge  that remains 
+largely open.  
+ 
+D. Privacy  and Deployment  Constraints  
+The use of  AI models in penetration testing 
+introduces important privacy considerations, 
+particularly when sensitive application data or 
+internal infrastructure details are involved. Cloud - 
+based intelligence solutions raise concerns related to 
+data exposure, regula tory compliance, and 
+organizational trust. While some studies 
+acknowledge these risks, privacy -aware deployment 
+strategies remain underexplored. Future work must 
+consider how advanced AI capabilities can be 
+delivered without compromising confidentiality, 
+especially in regulated or high -security  
+environments.  
+ 
+E. Explainability  and Human  Trust  
+As automated penetration testing systems become 
+more autonomous, the need for transparency and 
+explainability grows. Security analysts must be able 
+to understand why cert ain attack paths were selected 
+or why specific vulnerabilities were flagged. Many 
+AI-driven approaches, particularly those based on 
+deep learning, function as opaque decision -makers, 
+which  can hinder  trust and adoption.  Research  
+into 
+explainable AI techniques tailored to security 
+assessment  workflows  represents  an important  future 
+direction.  
+ 
+F. Ethical  and Dual -Use Considerations  
+The automation of offensive security capabilities 
+raises ethical concerns related to misuse and 
+unintended consequences. While AI -driven 
+penetration testing tools are designed to improve 
+defensive security, the same technologies could 
+potentially be exploi ted by malicious actors. 
+Balancing innovation with responsible use requires 
+ongoing attention to governance, access control, and 
+human -in-the-loop oversight mechanisms.  
+ 
+X. CONCLUSION  
+ 
+This survey examined the evolving landscape of 
+artificial intelligence –driven approaches to 
+automated web application penetration testing. As 
+modern applications continue to grow in complexity 
+and scale, traditional security assessment methods 
+face increas ing challenges in terms of adaptability, 
+efficiency, and coverage. The integration of AI 
+techniques has emerged as a promising response to 
+these  limitations,  enabling  more  intelligent,  scalable, 
+and context -aware security testing processes.  
+The survey trac ed the progression of research from 
+early machine learning –assisted scanners, which 
+focused on task -level augmentation, to  
+reinforcement learning –based systems capable of 
+strategic decision -making, and more recently to  
+large language model –based approaches  that 
+introduce semantic reasoning and flexible 
+orchestration  capabilities.  Each  paradigm  contributes 
+distinct strengths while also exhibiting inherent 
+limitations related to scalability, reliability, 
+generalization, and trust. Hybrid frameworks 
+represent an emerging direction aimed at leveraging 
+complementary advantages, though they also 
+introduce new challenges in system complexity and 
+validation.  
+Through a structured taxonomy and comparative 
+analysis, this paper highlighted key design 
+dimensions that dif ferentiate existing AI -driven 
+penetration testing frameworks, including autonomy 
+level, validation strategy, and deployment 
+constraints. The discussion of open research 
+challenges emphasized that reliable validation, false 
+positive reduction, privacy -aware  deployment, and 
+explainability remain critical barriers to widespread 
+adoption. Addressing these issues is essential for 
+transitioning automated penetration testing systems 
+from experimental  research  prototypes  to 
+trustworthy tools suitable for real -world security operations.  
+Rather  than proposing  new methods  or architectures, 
+this survey provides a consolidated and analytical 
+perspective on the current state of AI -driven 
+penetration testing research. By synthesizing prior 
+work and identifying unresol ved challenges, the 
+paper aims to serve as a reference point for 
+researchers and practitioners seeking to understand 
+existing approaches and to guide future 
+investigations toward more reliable, ethical, and 
+effective automated security assessment solutions . 
+ 
+REFERENCES  
+[1] N. P., S. A. Ratnam, and S. Bhaskaran, 
+“Comprehensive study on integrating AI -powered 
+threat intelligence using large language models,” in 
+Proc. 3rd Int. Conf. Communication, Security, and 
+Artificial Intelligence (ICCSAI) , 2025.  
+[2] A. Udupa H., B. Goyal, B. S. Anavi, S. P. 
+Kasturi, and P. Agarwal, “Advanced reinforcement 
+learning based penetration testing,” in Proc. Int. 
+Conf. Electronics, Computing, Communication and 
+Control Technology (ICECCC) , 2024.  
+[3] G. Deng et al. , “PENTESTGPT: Ev aluating and 
+harnessing large language models for automated 
+penetration testing,” in Proc. 33rd USENIX Security 
+Symp. (USENIX Security ’24) , 2024, pp. 847 –864. 
+[4] A. Happe and J. Cito, “Getting pwn’d by AI: 
+Penetration testing with large language models,” in 
+Proc. 31st ACM Joint Eur. Software Eng. Conf. and 
+Symp. Foundations of Software Engineering 
+(ESEC/FSE ’23) , 2023, pp. 1669 –1680.  
+[5] D. Clintswood,  G. Lie, L. Kuswandana,  N. Said,  
+S. Achmad, and D. Suhartono, “The usage of 
+machine learning on penetration testing  
+automation,” in Proc. 3rd Int. Conf. Electronic and 
+Electrical Engineering and Intelligent System 
+(ICE3IS) , 2023.  
+[6] A. Confido, E. V. Ntagiou, and M. Wallum, 
+“Reinforcing pene tration testing using AI,” in Proc. 
+IEEE Aerospace Conf. (AERO) , 2022.  
+[7] R. S. Jagamogan, S.  A. Ismail,  N. H. Hassan, and 
+H. Abas, “Penetration testing procedure using 
+machine learning,” in Proc. 4th Int. Conf. Smart 
+Sensors and Applications (ICSSA) , 2022, p p. 58 –63. 
+[8] H. D. Moore, “Metasploitable 2 exploitability 
+guide,” Rapid7. [Online]. Available: 
+https://docs.rapid7.com/metasploit/metasploitable -2/ 

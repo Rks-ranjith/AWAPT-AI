@@ -5,10 +5,12 @@ from awap.core.config import settings
 # Adjust URL for asyncpg if not already present
 db_url = settings.DATABASE_URL
 
+from sqlalchemy.pool import NullPool
+
 engine = create_async_engine(
     db_url,
     echo=False,
-    pool_pre_ping=True
+    poolclass=NullPool
 )
 
 AsyncSessionLocal = async_sessionmaker(

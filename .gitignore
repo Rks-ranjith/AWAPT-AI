@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Playwright MCP files
+.playwright-mcp/
+
+# Secrets and environment
+.env
+backend/.env
+*.env.local
+
+# Local databases
+*.db
+backend/awap.db
+
+# Generated reports (keep structure local only)
+reports/
+
+# Logs
+*.log
+logs/
+backend/logs/
+api_logs.txt
+worker_err.log
+api_err.log
+full_api_err.log
+logs_api.txt
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Additional documents / outputs
+*.pdf
+*.ppt
+*.pptx
+arch_extra.txt
+awap_ppt_extra.txt
+AWAP-AI_Architecture_extracted.txt
+AWAP-AI_Engine_Implementation_Guide.md
+AWAP-AI_UI_PROMPT.md
+extract_pdfs.py
+
+# OS generated files
+.DS_Store
+Thumbs.db

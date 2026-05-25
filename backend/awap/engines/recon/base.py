@@ -1,159 +1,102 @@
 import asyncio
+import aiohttp
 import httpx
 import logging
-import socket
-from typing import List, Dict, Any, Set
 from urllib.parse import urlparse
+import dns.resolver
 
 logger = logging.getLogger(__name__)
 
-class ReconEngine:
-    """
-    Industrial-Grade Asynchronous Reconnaissance Engine.
-    Handles passive OSINT, active DNS enumeration, and technology fingerprinting.
-    """
-    def __init__(self, target_url: str):
-        self.target_url = target_url
-        self.domain = urlparse(target_url).hostname or target_url.replace("https://", "").replace("http://", "").split("/")[0]
-        self.results: Dict[str, Any] = {
-            "target": self.target_url,
-            "domain": self.domain,
-            "ips": [],
-            "open_ports": [],
-            "subdomains": [],
-            "historical_urls": [],
-            "technologies": {},
-            "dns_records": {},
-            "sensitive_files": []
-        }
-        self.limits = httpx.Limits(max_keepalive_connections=30, max_connections=100)
-
-    async def run(self) -> Dict[str, Any]:
-        logger.info(f"Initiating Advanced Recon for {self.domain}...")
-
-        # 1. Core DNS & Infrastructure
-        await self._resolve_dns_advanced()
-
-        async with httpx.AsyncClient(limits=self.limits, timeout=10.0, verify=False, follow_redirects=True) as client:
-            # 2. Parallel Passive & Active Enum
-            tasks = [
-                self._query_crtsh(client),
-                self._query_alienvault(client),
-                self._query_wayback_machine(client),
-                self._fingerprint_tech(client),
-                self._scan_sensitive_files(client)
-            ]
-
-            if self.results["ips"]:
-                tasks.append(self._async_port_scan(self.results["ips"][0]))
-
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Post-processing
-        self.results["subdomains"] = sorted(list(set(self.results["subdomains"])))
-        self.results["historical_urls"] = list(set(self.results["historical_urls"]))[:1000] # Limit for UI stability
-        
-        logger.info(f"Recon completed. Found {len(self.results['subdomains'])} assets.")
-        return self.results
-
-    async def _resolve_dns_advanced(self):
-        """Perform deep DNS lookups for MX, NS, and TXT records."""
-        loop = asyncio.get_event_loop()
+async def enumerate_subdomains(domain: str) -> list[dict]:
+    results = []
+    
+    # 1. crt.sh
+    async with aiohttp.ClientSession() as session:
         try:
-            # Basic A record
-            addr_info = await loop.getaddrinfo(self.domain, None, family=socket.AF_INET)
-            self.results["ips"] = list(set([info[4][0] for info in addr_info]))
-            
-            # For a truly industry-grade tool, we'd use 'dnspython' here.
-            # Since we want to stay lightweight but effective, we use standard library hooks.
-            # In a real environment, we'd spawn 'dig' or use a library.
+            url = f"https://crt.sh/?q=%.{domain}&output=json"
+            async with session.get(url, timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    for entry in data:
+                        name = entry.get("name_value", "").lower()
+                        for n in name.split("\\n"):
+                            if n not in [r["subdomain"] for r in results]:
+                                results.append({"subdomain": n, "source": "crt.sh"})
         except Exception as e:
-            logger.warning(f"DNS resolution anomaly: {e}")
-
-    async def _fingerprint_tech(self, client: httpx.AsyncClient):
-        """Advanced technology fingerprinting via headers and body patterns."""
-        try:
-            response = await client.get(self.target_url)
-            headers = response.headers
-            body = response.text.lower()
+            logger.warning(f"crt.sh error: {e}")
             
-            tech = self.results["technologies"]
-            tech["Server"] = headers.get("Server", "Unknown")
-            tech["Language"] = headers.get("X-Powered-By", "Unknown")
-            
-            # WAF Detection
-            if any(k in headers for k in ["CF-RAY", "cloudflare"]): tech["WAF"] = "Cloudflare"
-            elif "x-akamai-transformed" in headers: tech["WAF"] = "Akamai"
-            elif "x-sucuri-id" in headers: tech["WAF"] = "Sucuri"
-            
-            # CMS Detection
-            if "/wp-content/" in body: tech["CMS"] = "WordPress"
-            elif "drupal" in body: tech["CMS"] = "Drupal"
-            elif "_next/static" in body: tech["Framework"] = "Next.js"
-            
-        except Exception: pass
-
-    async def _scan_sensitive_files(self, client: httpx.AsyncClient):
-        """Check for common sensitive file leaks."""
-        sensitive_paths = [
-            "/.env", "/.git/config", "/.svn/entries", "/.htaccess", 
-            "/robots.txt", "/sitemap.xml", "/package.json", 
-            "/composer.json", "/phpinfo.php", "/config.php.bak"
-        ]
-        
-        async def check_path(path):
-            try:
-                url = f"{self.target_url.rstrip('/')}{path}"
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    # Validate it's not a generic 200 (soft 404)
-                    if len(resp.content) > 20 and "html" not in resp.headers.get("Content-Type", ""):
-                        self.results["sensitive_files"].append(path)
-            except Exception: pass
-
-        await asyncio.gather(*(check_path(p) for p in sensitive_paths))
-
-    async def _query_crtsh(self, client: httpx.AsyncClient):
-        url = f"https://crt.sh/?q=%25.{self.domain}&output=json"
+    # 2. DNS Brute-force (simplified)
+    # Using python's dns module (dnspython must be in requirements)
+    common_subs = ["api", "dev", "staging", "test", "admin", "mail", "www"]
+    
+    async def check_sub(sub):
+        sub_domain = f"{sub}.{domain}"
         try:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                for entry in resp.json():
-                    name = entry.get("name_value", "").lower()
-                    self.results["subdomains"].extend(name.split("\n"))
-        except Exception: pass
+            # We use an executor because dnspython's sync resolver blocks
+            loop = asyncio.get_event_loop()
+            answers = await loop.run_in_executor(None, dns.resolver.resolve, sub_domain, 'A')
+            ip = answers[0].to_text()
+            if sub_domain not in [r["subdomain"] for r in results]:
+                results.append({"subdomain": sub_domain, "ip": ip, "source": "dns"})
+        except Exception:
+            pass
 
-    async def _query_alienvault(self, client: httpx.AsyncClient):
-        url = f"https://otx.alienvault.com/api/v1/indicators/domain/{self.domain}/passive_dns"
+    await asyncio.gather(*(check_sub(sub) for sub in common_subs))
+    
+    return results
+
+async def fingerprint_target(url: str) -> dict:
+    tech = {"server": None, "framework": None, "cms": None, "waf": None}
+    
+    async with aiohttp.ClientSession() as session:
         try:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                for record in resp.json().get("passive_dns", []):
-                    hostname = record.get("hostname", "").lower()
-                    if hostname.endswith(self.domain):
-                        self.results["subdomains"].append(hostname)
-        except Exception: pass
-
-    async def _query_wayback_machine(self, client: httpx.AsyncClient):
-        url = f"http://web.archive.org/cdx/search/cdx?url=*.{self.domain}/*&output=json&collapse=urlkey&limit=500"
+            async with session.get(url, timeout=10) as resp:
+                headers = resp.headers
+                body = (await resp.text()).lower()
+                
+                tech["server"] = headers.get("Server")
+                tech["language"] = headers.get("X-Powered-By")
+                
+                # WAF
+                if "cf-ray" in headers or "cloudflare" in headers.get("Server", "").lower():
+                    tech["waf"] = "Cloudflare"
+                elif "x-akamai" in headers:
+                    tech["waf"] = "Akamai"
+                
+                # CMS / Framework
+                if "/wp-content/" in body:
+                    tech["cms"] = "WordPress"
+                elif "laravel_session" in headers.get("Set-Cookie", ""):
+                    tech["framework"] = "Laravel"
+        except Exception as e:
+            logger.warning(f"Fingerprinting failed: {e}")
+            
+        # WAF specific test
         try:
-            resp = await client.get(url)
-            if resp.status_code == 200 and len(resp.json()) > 1:
-                for row in resp.json()[1:]:
-                    self.results["historical_urls"].append(row[2])
-        except Exception: pass
+            waf_url = f"{url}?q=<script>alert(1)</script>"
+            async with session.get(waf_url, timeout=10) as resp:
+                body = (await resp.text()).lower()
+                if "cloudflare ray id" in body:
+                    tech["waf"] = "Cloudflare"
+                elif "access denied" in body:
+                    tech["waf"] = "Generic WAF"
+        except Exception:
+            pass
+            
+    return tech
 
-    async def _async_port_scan(self, ip: str):
-        # Increased port list for "industry grade"
-        common_ports = [
-            21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 
-            993, 995, 1723, 3306, 3389, 5432, 5900, 6379, 8000, 8080, 8443, 27017
-        ]
-        async def check_port(p):
-            try:
-                _, writer = await asyncio.wait_for(asyncio.open_connection(ip, p), timeout=0.8)
-                writer.close()
-                await writer.wait_closed()
-                self.results["open_ports"].append(p)
-            except Exception: pass
-        await asyncio.gather(*(check_port(p) for p in common_ports))
+async def scan_common_ports(host: str) -> list[int]:
+    common_ports = [80, 443, 8080, 8443, 3000, 5000, 8000, 8888, 9000]
+    open_ports = []
+    
+    async def check_port(port):
+        try:
+            _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=3.0)
+            writer.close()
+            await writer.wait_closed()
+            open_ports.append(port)
+        except Exception:
+            pass
+
+    await asyncio.gather(*(check_port(port) for port in common_ports))
+    return open_ports

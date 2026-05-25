@@ -1,113 +1,405 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+import os
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+
 from awap.api import crud, schemas
+from awap.core.celery_app import celery_app
+from awap.core.config import settings
 from awap.core.database import get_db
+from awap.models import Finding, Scan, Target
+from awap.models.endpoint import Endpoint as EndpointModel
+from awap.reporting.report_generator import (
+    VALID_TEMPLATES,
+    fetch_scan_report_data,
+    generate_reports,
+)
 
 router = APIRouter()
 
-@router.get("/")
-async def api_root():
-    return {"message": "AWAP-AI API v1.1.0 is running", "docs": "/docs"}
+
+@router.post("/targets", response_model=schemas.Target)
+async def create_target(target: schemas.TargetCreate, db: AsyncSession = Depends(get_db)):
+    db_target = await crud.get_target_by_domain(db, domain=target.domain)
+    if db_target:
+        raise HTTPException(status_code=400, detail="Target already exists")
+    return await crud.create_target(db=db, target=target)
+
 
 @router.get("/targets", response_model=List[schemas.Target])
 async def read_targets(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     return await crud.get_targets(db, skip=skip, limit=limit)
 
-@router.post("/targets", response_model=schemas.Target)
-async def create_target(target: schemas.TargetCreate, db: AsyncSession = Depends(get_db)):
-    db_target = await crud.get_target_by_url(db, url=target.base_url)
-    if db_target:
-        raise HTTPException(status_code=400, detail="Target already exists")
-    return await crud.create_target(db=db, target=target)
-
-@router.delete("/targets/{target_id}")
-async def delete_target(target_id: int, db: AsyncSession = Depends(get_db)):
-    success = await crud.delete_target(db, target_id=target_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Target not found")
-    return {"status": "success"}
-
-@router.get("/findings", response_model=List[schemas.Finding])
-async def read_findings(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    return await crud.get_findings(db, skip=skip, limit=limit)
-
-@router.get("/analytics/summary")
-async def get_analytics_summary(db: AsyncSession = Depends(get_db)):
-    return await crud.get_analytics_summary(db)
 
 @router.post("/scans", response_model=schemas.Scan)
 async def create_scan(scan: schemas.ScanCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Target.authorized).where(Target.id == scan.target_id)
+    )
+    auth = result.scalar()
+    if not auth:
+        raise HTTPException(status_code=403, detail="Target not authorized for scanning")
+
     db_scan = await crud.create_scan(db=db, scan=scan)
-    from awap.engines.worker import execute_scan
-    execute_scan.delay(db_scan.id)
+
+    from awap.engines.worker import run_scope_task
+    run_scope_task.delay(str(db_scan.id), str(scan.target_id))
+
     return db_scan
 
+
 @router.get("/scans", response_model=List[schemas.Scan])
-async def read_scans(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def read_scans(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
     return await crud.get_scans(db, skip=skip, limit=limit)
 
+
 @router.get("/scans/{scan_id}", response_model=schemas.Scan)
-async def read_scan(scan_id: int, db: AsyncSession = Depends(get_db)):
+async def read_scan(scan_id: UUID, db: AsyncSession = Depends(get_db)):
     db_scan = await crud.get_scan(db, scan_id=scan_id)
     if db_scan is None:
         raise HTTPException(status_code=404, detail="Scan not found")
     return db_scan
 
-@router.patch("/findings/{finding_id}", response_model=schemas.Finding)
-async def update_finding(finding_id: int, finding_update: schemas.FindingUpdate, db: AsyncSession = Depends(get_db)):
-    db_finding = await crud.update_finding(db, finding_id=finding_id, finding_update=finding_update)
-    if db_finding is None:
-        raise HTTPException(status_code=404, detail="Finding not found")
-    return db_finding
 
-@router.get("/scans/{scan_id}/report")
-async def download_scan_report(scan_id: int, db: AsyncSession = Depends(get_db)):
-    from starlette.responses import FileResponse
-    from awap.core.report_generator import generate_scan_report
-    from awap.models.scan import Scan
-    from awap.models.target import Target
-    from awap.models.finding import Finding
-    from sqlalchemy import select
-    
-    res = await db.execute(select(Scan).filter(Scan.id == scan_id))
-    scan = res.scalars().first()
+@router.get("/scans/{scan_id}/findings", response_model=List[schemas.Finding])
+async def read_scan_findings(scan_id: UUID, db: AsyncSession = Depends(get_db)):
+    return await crud.get_scan_findings(db, scan_id=scan_id)
+
+
+@router.get("/scans/{scan_id}/endpoints", response_model=List[schemas.Endpoint])
+async def read_scan_endpoints(scan_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Fetch all crawled endpoints for a scan — powers the live Attack Surface Graph."""
+    result = await db.execute(
+        select(EndpointModel)
+        .filter(EndpointModel.scan_id == scan_id)
+        .order_by(EndpointModel.discovered_at)
+    )
+    return result.scalars().all()
+
+
+@router.get("/scans/{scan_id}/logs", response_model=List[schemas.ScanLog])
+async def read_scan_logs(scan_id: UUID, db: AsyncSession = Depends(get_db)):
+    return await crud.get_scan_logs(db, scan_id=scan_id)
+
+
+@router.post("/scans/{scan_id}/pause")
+async def pause_scan(scan_id: UUID, db: AsyncSession = Depends(get_db)):
+    await crud.update_scan_state(db, scan_id, "PAUSED")
+    return {"status": "PAUSED"}
+
+
+@router.post("/scans/{scan_id}/resume")
+async def resume_scan(scan_id: UUID, db: AsyncSession = Depends(get_db)):
+    await crud.update_scan_state(db, scan_id, "RESUMED")
+    return {"status": "RESUMED"}
+
+
+@router.get("/findings", response_model=List[schemas.Finding])
+async def read_all_findings(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Finding).order_by(desc(Finding.discovered_at)).offset(skip).limit(limit)
+    )
+    return result.scalars().all()
+
+
+@router.patch("/findings/{finding_id}", response_model=schemas.Finding)
+async def update_finding(finding_id: UUID, updates: dict, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Finding).filter(Finding.id == finding_id))
+    finding = result.scalar()
+    if not finding:
+        raise HTTPException(404, "Finding not found")
+    for key, value in updates.items():
+        if hasattr(finding, key):
+            setattr(finding, key, value)
+    await db.commit()
+    await db.refresh(finding)
+    return finding
+
+
+@router.get("/analytics/summary")
+async def get_analytics_summary(db: AsyncSession = Depends(get_db)):
+    total = await db.scalar(select(func.count(Finding.id)))
+    critical = await db.scalar(
+        select(func.count(Finding.id)).filter(Finding.severity == "CRITICAL")
+    )
+    high = await db.scalar(
+        select(func.count(Finding.id)).filter(Finding.severity == "HIGH")
+    )
+    medium = await db.scalar(
+        select(func.count(Finding.id)).filter(Finding.severity == "MEDIUM")
+    )
+    low = await db.scalar(
+        select(func.count(Finding.id)).filter(Finding.severity == "LOW")
+    )
+    active_scans = await db.scalar(
+        select(func.count(Scan.id)).filter(
+            Scan.state.notin_(["COMPLETE", "FAILED", "ABORTED"])
+        )
+    )
+    targets_count = await db.scalar(select(func.count(Target.id)))
+
+    return {
+        "total": total or 0,
+        "critical": critical or 0,
+        "high": high or 0,
+        "medium": medium or 0,
+        "low": low or 0,
+        "active_scans": active_scans or 0,
+        "targets_count": targets_count or 0,
+    }
+
+
+@router.get("/health", response_model=schemas.HealthCheck)
+async def health_check(db: AsyncSession = Depends(get_db)):
+    status = {"status": "ok", "celery": "error", "postgres": "error", "redis": "error"}
+    try:
+        await db.execute(select(Target.id).limit(1))
+        status["postgres"] = "connected"
+    except Exception:
+        pass
+
+    try:
+        i = celery_app.control.inspect()
+        if i.ping():
+            status["celery"] = "connected"
+        import redis.asyncio as redis
+        r = redis.from_url(settings.REDIS_URL)
+        if await r.ping():
+            status["redis"] = "connected"
+        await r.aclose()
+    except Exception:
+        pass
+
+    if "error" in status.values():
+        status["status"] = "degraded"
+        return status
+
+    return status
+
+
+async def _resolve_scan_id(scan_id: str, db: AsyncSession) -> UUID:
+    if scan_id == "latest":
+        result = await db.execute(select(Scan).order_by(desc(Scan.started_at)))
+        scan = result.scalars().first()
+        if not scan:
+            raise HTTPException(404, "No scans found")
+        return scan.id
+    try:
+        return UUID(scan_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid scan ID format")
+
+
+async def _ensure_reports(scan_uuid: UUID, db: AsyncSession, template: str = "tech") -> None:
+    scan = await crud.get_scan(db, scan_uuid)
     if not scan:
-        raise HTTPException(status_code=404, detail="Scan not found")
-        
-    res_target = await db.execute(select(Target).filter(Target.id == scan.target_id))
-    target = res_target.scalars().first()
-    
-    res_findings = await db.execute(select(Finding).filter(Finding.scan_id == scan_id))
-    findings = res_findings.scalars().all()
-    
-    pdf_path = generate_scan_report(db, scan, target, findings)
-    
+        raise HTTPException(404, "Scan not found")
+    report_dir = os.path.join("reports", str(scan_uuid))
+    legacy = f"reports/AWAP_Scan_Report_{scan_uuid}.pdf"
+    tpl_pdf = os.path.join(report_dir, f"report_{template}.pdf")
+    if not os.path.exists(tpl_pdf) and not os.path.exists(legacy):
+        generate_reports(str(scan_uuid), str(scan.target_id), template=template)
+
+
+@router.get("/reports/{scan_id}/preview")
+async def report_preview(
+    scan_id: str,
+    template: str = Query("tech"),
+    db: AsyncSession = Depends(get_db),
+):
+    """JSON preview for the Reports UI."""
+    if template not in VALID_TEMPLATES:
+        raise HTTPException(400, detail=f"Invalid template. Use one of: {', '.join(VALID_TEMPLATES)}")
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    scan = await crud.get_scan(db, scan_uuid)
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+    data = await fetch_scan_report_data(str(scan_uuid), str(scan.target_id))
+    if not data:
+        raise HTTPException(404, "Report data not available")
+    return {
+        "scan_id": data["scan_id"],
+        "target": data["target"],
+        "scan_state": data["scan_state"],
+        "generated_at": data["generated_at"],
+        "template": template,
+        "severity_counts": data["severity_counts"],
+        "finding_count": len(data["findings"]),
+        "top_findings": data["findings"][:5],
+    }
+
+
+@router.post("/reports/{scan_id}/generate")
+async def generate_report_on_demand(
+    scan_id: str,
+    template: str = Query("tech"),
+    db: AsyncSession = Depends(get_db),
+):
+    if template not in VALID_TEMPLATES and template != "all":
+        raise HTTPException(400, detail=f"Invalid template. Use one of: {', '.join(VALID_TEMPLATES)}, or all")
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    scan = await crud.get_scan(db, scan_uuid)
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+    paths = generate_reports(str(scan_uuid), str(scan.target_id), template=template)
+    return {"status": "generated", "scan_id": str(scan_uuid), "template": template, "paths": paths}
+
+
+@router.get("/reports/{scan_id}/json")
+async def report_json(scan_id: str, db: AsyncSession = Depends(get_db)):
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    scan = await crud.get_scan(db, scan_uuid)
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+    data = await fetch_scan_report_data(str(scan_uuid), str(scan.target_id))
+    if not data:
+        raise HTTPException(404, "Report data not available")
+    return data
+
+
+@router.get("/reports/{scan_id}/bounty")
+async def report_bounty_json(scan_id: str, db: AsyncSession = Depends(get_db)):
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    await _ensure_reports(scan_uuid, db, template="bounty")
+    path = os.path.join("reports", str(scan_uuid), "bounty_submissions.json")
+    if not os.path.exists(path):
+        raise HTTPException(404, "Bounty report not found")
     return FileResponse(
-        path=pdf_path,
-        filename=f"AWAP_Scan_Report_{scan_id}.pdf",
-        media_type="application/pdf"
+        path,
+        media_type="application/json",
+        filename=f"bounty_submissions_{scan_uuid}.json",
     )
 
-@router.get("/findings/{finding_id}/exploit")
-async def generate_exploit(finding_id: int, db: AsyncSession = Depends(get_db)):
-    from fastapi.responses import PlainTextResponse
-    from awap.models.finding import Finding
-    from awap.models.target import Target
-    from awap.core.exploit_gen import generate_exploit_script
-    from sqlalchemy import select
-    
-    res = await db.execute(select(Finding).filter(Finding.id == finding_id))
-    finding = res.scalars().first()
+
+@router.get("/reports/{scan_id}/markdown")
+async def download_markdown_report(
+    scan_id: str,
+    template: str = Query("bounty"),
+    db: AsyncSession = Depends(get_db),
+):
+    if template not in VALID_TEMPLATES:
+        raise HTTPException(400, detail=f"Invalid template. Use one of: {', '.join(VALID_TEMPLATES)}")
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    await _ensure_reports(scan_uuid, db, template=template)
+    path = os.path.join("reports", str(scan_uuid), f"report_{template}.md")
+    if not os.path.exists(path):
+        raise HTTPException(404, "Markdown report not found")
+    return FileResponse(
+        path,
+        media_type="text/markdown",
+        filename=f"AWAPT_Report_{scan_uuid}_{template}.md",
+    )
+
+
+@router.get("/reports/{scan_id}/pdf")
+async def download_pdf_report(
+    scan_id: str,
+    template: str = Query("tech"),
+    db: AsyncSession = Depends(get_db),
+):
+    if template not in VALID_TEMPLATES:
+        raise HTTPException(400, detail=f"Invalid template. Use one of: {', '.join(VALID_TEMPLATES)}")
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    await _ensure_reports(scan_uuid, db, template=template)
+    path = os.path.join("reports", str(scan_uuid), f"report_{template}.pdf")
+    legacy = f"reports/AWAP_Scan_Report_{scan_uuid}.pdf"
+    if not os.path.exists(path):
+        path = legacy
+    if not os.path.exists(path):
+        raise HTTPException(404, "Report not found")
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=f"AWAPT_Report_{scan_uuid}_{template}.pdf",
+    )
+
+
+@router.get("/reports/{scan_id}/csv")
+async def download_csv_report(scan_id: str, db: AsyncSession = Depends(get_db)):
+    scan_uuid = await _resolve_scan_id(scan_id, db)
+    await _ensure_reports(scan_uuid, db)
+    path = os.path.join("reports", str(scan_uuid), "findings.csv")
+    legacy = f"reports/AWAP_Scan_Report_{scan_uuid}.csv"
+    if not os.path.exists(path):
+        path = legacy
+    if not os.path.exists(path):
+        raise HTTPException(404, "CSV report not found")
+    return FileResponse(
+        path,
+        media_type="text/csv",
+        filename=f"AWAPT_Findings_{scan_uuid}.csv",
+    )
+
+
+@router.get("/findings/{finding_id}/poc")
+async def get_finding_poc(finding_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Full PoC package for bug bounty submission (architecture §13.1 evidence)."""
+    result = await db.execute(select(Finding).filter(Finding.id == finding_id))
+    finding = result.scalar()
     if not finding:
-        raise HTTPException(status_code=404, detail="Finding not found")
-        
-    res_target = await db.execute(select(Target).filter(Target.id == finding.target_id))
-    target = res_target.scalars().first()
-    script = generate_exploit_script(finding, target)
-    
-    return PlainTextResponse(
-        content=script,
+        raise HTTPException(404, "Finding not found")
+    from awap.core.poc_builder import build_poc_artifacts, bounty_markdown_report
+    from awap.reporting.report_generator import finding_to_record
+
+    target_domain = ""
+    scan = await crud.get_scan(db, finding.scan_id)
+    if scan:
+        t = await db.scalar(select(Target).filter(Target.id == scan.target_id))
+        target_domain = t.domain if t else ""
+    record = finding_to_record(finding, target_domain)
+    return {
+        "finding_id": str(finding.id),
+        "title": record.get("title"),
+        "severity": finding.severity,
+        "cvss_score": finding.cvss_score,
+        "cwe_id": finding.cwe_id,
+        "poc_artifacts": finding.poc_artifacts or build_poc_artifacts(record),
+        "bounty_markdown": record.get("bounty_markdown") or bounty_markdown_report(record, target_domain),
+        "steps_to_reproduce": finding.steps_to_reproduce,
+        "impact": finding.impact,
+    }
+
+
+@router.get("/findings/{finding_id}/exploit")
+async def download_exploit(finding_id: UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Finding).filter(Finding.id == finding_id))
+    finding = result.scalar()
+    if not finding:
+        raise HTTPException(404, "Finding not found")
+
+    from awap.reporting.report_generator import poc_curl, poc_python
+
+    record = {
+        "url": finding.url,
+        "param": finding.param,
+        "payload": finding.payload,
+    }
+    exploit_content = f'''# AWAPT-AI Proof of Concept
+# Vulnerability: {finding.vuln_class}
+# Target: {finding.url}
+# CWE: {finding.cwe_id or "N/A"}
+# CVSS: {finding.cvss_score or "N/A"}
+
+"""
+{ finding.description or "Reproduce manually and verify impact before submission." }
+"""
+
+# curl PoC:
+# {poc_curl(record)}
+
+{poc_python(record)}
+'''
+    os.makedirs("reports", exist_ok=True)
+    temp_path = f"reports/exploit_{finding_id}.py"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        f.write(exploit_content)
+
+    return FileResponse(
+        temp_path,
         media_type="text/x-python",
-        headers={"Content-Disposition": f"attachment; filename=exploit_{finding.vuln_class.lower()}_{finding_id}.py"}
+        filename=f"poc_{finding_id}.py",
     )

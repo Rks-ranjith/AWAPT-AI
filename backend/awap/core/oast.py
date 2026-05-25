@@ -24,7 +24,7 @@ class OASTManager:
         self._interactions: List[OASTInteraction] = []
         self._active_tokens: Dict[str, dict] = {}
 
-    def generate_token(self, scan_id: int, module_id: str) -> str:
+    def generate_token(self, scan_id: str, module_id: str) -> str:
         """Generates a unique OAST token linked to a specific scan and module."""
         token = uuid.uuid4().hex[:12]
         self._active_tokens[token] = {

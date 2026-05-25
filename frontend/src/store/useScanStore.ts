@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = '/api/v1';
 
 interface ScanState {
   isScanning: boolean;
@@ -9,7 +9,7 @@ interface ScanState {
   activeScanId: number | null;
   logs: string[];
   currentPhase: string;
-  startScan: (targetId: number) => Promise<void>;
+  startScan: (targetId: number) => Promise<boolean>;
   stopScan: () => void;
   addLog: (log: string) => void;
   setPhase: (phase: string) => void;
@@ -31,8 +31,10 @@ export const useScanStore = create<ScanState>((set) => ({
         logs: [`[SYS] Scan #${response.data.id} Initialized.`, '[NET] Establishing handshake with target...'], 
         currentPhase: 'RECONNAISSANCE' 
       });
+      return true;
     } catch (err) {
       console.error("Failed to start scan:", err);
+      return false;
     }
   },
   stopScan: () => set({ isScanning: false, activeTargetId: null, activeScanId: null }),

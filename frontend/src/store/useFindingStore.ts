@@ -1,18 +1,20 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = '/api/v1';
 
 interface Finding {
-  id: number;
+  id: string;
   vuln_class: string;
   severity: string;
-  endpoint_url: string;
-  method: string;
+  url: string;
+  param?: string;
   payload?: string;
   confidence: number;
   discovered_at: string;
-  status: string;
+  cvss_score?: number;
+  description?: string;
+  false_positive: boolean;
 }
 
 interface FindingState {
@@ -29,7 +31,7 @@ interface FindingState {
   loading: boolean;
   fetchFindings: () => Promise<void>;
   fetchSummary: () => Promise<void>;
-  updateFindingStatus: (id: number, status: string) => Promise<void>;
+  updateFindingStatus: (id: string, updates: Record<string, unknown>) => Promise<void>;
 }
 
 export const useFindingStore = create<FindingState>((set, get) => ({
@@ -51,9 +53,9 @@ export const useFindingStore = create<FindingState>((set, get) => ({
       set({ summary: response.data });
     } catch (err) {}
   },
-  updateFindingStatus: async (id, status) => {
+  updateFindingStatus: async (id, updates) => {
     try {
-      await axios.patch(`${API_URL}/findings/${id}`, { status });
+      await axios.patch(`${API_URL}/findings/${id}`, updates);
       await get().fetchFindings();
     } catch (err) {
       console.error("Failed to update finding status:", err);

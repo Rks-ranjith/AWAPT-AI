@@ -14,7 +14,6 @@ interface Interaction {
 
 export function OASTActivity() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Poll for global OAST activity (in a real app, this would be a WebSocket)
   useEffect(() => {
@@ -25,8 +24,6 @@ export function OASTActivity() {
         setInteractions(data);
       } catch (err) {
         console.error("OAST Fetch Error", err);
-      } finally {
-        setLoading(false);
       }
     };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useScanStore } from '@/store/useScanStore';
 
-const WS_URL = 'ws://localhost:8000/ws/monitor';
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/scan`;
 
 export function useScanMonitor(scanId: number | null) {
   const { addLog, setPhase } = useScanStore();
@@ -26,17 +26,17 @@ export function useScanMonitor(scanId: number | null) {
           if (data.message) {
             addLog(data.message);
           }
-          if (data.phase) {
-            const phaseMap: Record<string, number> = {
-              'RECON': 1,
-              'CRAWL': 2,
-              'PARAM_FUZZ': 2,
-              'AI_REASONING': 3,
-              'ATTACK': 3,
-              'ANALYSIS': 4,
-              'COMPLETED': 4
+          if (data.state) {
+            const phaseMap: Record<string, string> = {
+              'RECON': 'RECONNAISSANCE',
+              'CRAWL': 'CRAWLING',
+              'MAPPING': 'CRAWLING',
+              'ATTACK': 'AI_PLANNING',
+              'ANALYSIS': 'AI_PLANNING',
+              'REPORTING': 'VULN_EXPLOITATION',
+              'COMPLETE': 'VULN_EXPLOITATION'
             };
-            if (phaseMap[data.phase]) setPhase(phaseMap[data.phase]);
+            if (phaseMap[data.state]) setPhase(phaseMap[data.state]);
           }
         } catch (e) {
           // If it's not JSON, it might be a raw log string

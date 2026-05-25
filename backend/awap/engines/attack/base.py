@@ -1,79 +1,104 @@
+import asyncio
 from abc import ABC, abstractmethod
-from typing import ClassVar, List, Dict, Any, Tuple
-import importlib
-import pkgutil
+from typing import TYPE_CHECKING, Any
 
-class Parameter:
-    def __init__(self, name: str, location: str, original_value: str, endpoint_id: str):
-        self.name = name
-        self.location = location
-        self.original_value = original_value
-        self.endpoint_id = endpoint_id
+import httpx
 
-class Endpoint:
-    def __init__(self, url: str, method: str):
-        self.url = url
-        self.method = method
+from awap.core.poc_builder import build_http_request_raw, build_http_response_raw
 
-class ParameterProfile:
-    def __init__(self, param_name: str, baseline_status: int, baseline_length: int, baseline_time: int):
-        self.param_name = param_name
-        self.baseline_status = baseline_status
-        self.baseline_length = baseline_length
-        self.baseline_time = baseline_time
-        self.is_reflected = False
-        self.reflection_context = "unknown"
-        self.likely_sql_context = False
+if TYPE_CHECKING:
+    from awap.engines.scan_context import ScanContext
 
-class Finding:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-_MODULE_REGISTRY: Dict[str, type["AttackModule"]] = {}
-
-def register_module(cls):
-    """Decorator that registers an attack module class."""
-    _MODULE_REGISTRY[cls.module_id] = cls
-    return cls
 
 class AttackModule(ABC):
-    module_id: ClassVar[str]
-    vuln_class: ClassVar[str]
-    severity: ClassVar[str]
-    requires_reflection: ClassVar[bool] = False
-    requires_oob: ClassVar[bool] = False
-    safe_to_run_in_prod: ClassVar[bool] = True
+    module_id: str = "base"
+    vuln_class: str = "UNKNOWN"
 
-    def __init__(self, payload_engine, http_client, oob_server=None):
-        self.payload_engine = payload_engine
-        self.http = http_client
-        self.oob = oob_server
-
-    @abstractmethod
-    async def run(self, endpoint: Endpoint, param: Parameter, profile: ParameterProfile) -> List[Finding]: 
-        pass
-
-    @abstractmethod
-    async def verify(self, finding: Finding) -> bool: 
-        pass
-
-    def build_finding(self, endpoint, param, payload, request_raw, response_raw, confidence, evidence) -> Finding:
-        cvss_map = {"CRITICAL": 9.8, "HIGH": 7.5, "MEDIUM": 5.0, "LOW": 3.0}
-        return Finding(
-            module_id=self.module_id,
-            vuln_class=self.vuln_class,
-            severity=self.severity,
-            cvss_score=cvss_map.get(self.severity.upper(), 5.0),
-            endpoint=endpoint.url,
-            method=endpoint.method,
-            parameter=param.name,
-            parameter_location=param.location,
-            payload=payload,
-            request_raw=request_raw,
-            response_raw=response_raw,
-            confidence=confidence,
-            evidence=evidence,
+    def __init__(self, rate_limit: float = 10.0):
+        self._default_rps = rate_limit
+        self.client = httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0),
+            follow_redirects=False,
+            verify=False,
         )
 
-def load_all_modules():
-    pass
+    async def close(self) -> None:
+        await self.client.aclose()
+
+    async def send_payload(
+        self,
+        url: str,
+        method: str,
+        payload: str,
+        param: str,
+        param_type: str,
+        context: "ScanContext | None" = None,
+    ) -> tuple[httpx.Response | None, dict[str, Any]]:
+        """Send attack request with rate limiting, scope checks, and raw capture."""
+        meta: dict[str, Any] = {"blocked": False, "reason": None}
+
+        if context:
+            if not context.scope_enforcer.is_in_scope(url):
+                meta["blocked"] = True
+                meta["reason"] = "out_of_scope"
+                return None, meta
+            await context.rate_limiter.acquire(context.target_domain)
+
+        method = method.upper()
+        try:
+            if param_type == "url_param":
+                import urllib.parse
+                sep = "&" if "?" in url else "?"
+                enc = urllib.parse.quote(str(payload), safe="")
+                test_url = f"{url}{sep}{param}={enc}"
+                resp = await self.client.request(method, test_url)
+            elif param_type == "body":
+                resp = await self.client.request(method, url, data={param: payload})
+            elif param_type == "header":
+                resp = await self.client.request(method, url, headers={param: payload})
+            else:
+                resp = await self.client.request(method, url)
+
+            if resp.status_code == 429 and context:
+                await asyncio.sleep(2.0)
+                return await self.send_payload(url, method, payload, param, param_type, context)
+
+            req_raw = build_http_request_raw(
+                method,
+                str(resp.request.url),
+                dict(resp.request.headers),
+            )
+            res_raw = build_http_response_raw(
+                resp.status_code,
+                dict(resp.headers),
+                resp.text,
+            )
+            meta["request_raw"] = req_raw
+            meta["response_raw"] = res_raw
+            meta["response_status"] = resp.status_code
+            meta["response_headers"] = dict(resp.headers)
+            meta["response_body"] = resp.text[:4000]
+            return resp, meta
+        except Exception as exc:
+            meta["error"] = str(exc)
+            return None, meta
+
+    def analyze_with_rae(
+        self,
+        context: "ScanContext | None",
+        url: str,
+        resp: httpx.Response,
+        payload: str,
+    ) -> dict[str, Any]:
+        if not context:
+            return {"is_vulnerable": False, "confidence": 0.0, "evidence": []}
+        return context.response_analyzer.analyze_response(url, resp, payload)
+
+    @abstractmethod
+    async def run(
+        self,
+        target_url: str,
+        params: list[dict],
+        context: "ScanContext | None" = None,
+    ) -> list[dict]:
+        pass

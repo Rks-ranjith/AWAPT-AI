@@ -9,46 +9,128 @@ class AILogicEngine:
     Core LLM Orchestration Engine for AWAP-AI.
     Handles Vulnerability Classification, Remediation Writing, and Payload Mutation.
     """
-    def __init__(self, provider: str, api_key: str):
-        self.provider = provider.lower()
-        self.api_key = api_key
+    def __init__(self, provider: str | None = None, api_key: str | None = None, model: str | None = None, base_url: str | None = None):
+        from awap.core.config import settings
+        self.provider = (provider or settings.LLM_PROVIDER or "anthropic").lower()
+        self.api_key = api_key or settings.LLM_API_KEY
+        self.base_url = base_url or settings.LLM_BASE_URL
+        
+        # Resolve default models
+        default_model = "gemini-2.5-flash"
+        if self.provider == "openai":
+            default_model = "gpt-4o"
+        elif self.provider == "anthropic":
+            default_model = "claude-3-5-sonnet-20241022"
+            
+        self.model = model or settings.LLM_MODEL or default_model
         
         # Instantiate clients dynamically based on settings
         if self.provider == "anthropic":
             from anthropic import AsyncAnthropic
-            self.client = AsyncAnthropic(api_key=self.api_key)
+            kwargs = {"api_key": self.api_key}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+            self.client = AsyncAnthropic(**kwargs)
         elif self.provider == "openai":
             from openai import AsyncOpenAI
-            self.client = AsyncOpenAI(api_key=self.api_key)
+            kwargs = {"api_key": self.api_key}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+            self.client = AsyncOpenAI(**kwargs)
+        elif self.provider in ("gemini", "google"):
+            if self.base_url:
+                from openai import AsyncOpenAI
+                self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+            else:
+                self.client = None
         else:
             self.client = None
 
     async def _dispatch_prompt(self, system_prompt: str, user_prompt: str, max_tokens: int = 1000) -> str:
         """Helper to seamlessly route requests to the configured LLM API."""
+        if not self.api_key:
+            logger.warning("[LLM] API Key not configured. Returning fallback.")
+            raise ValueError("No LLM API Key configured.")
+
+        # Native Gemini API call (zero-dependency REST over HTTP)
+        if self.provider in ("gemini", "google") and not self.base_url:
+            import httpx
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+            headers = {"Content-Type": "application/json"}
+            generation_config = {
+                "maxOutputTokens": max(max_tokens, 4096)
+            }
+            if self.model.startswith("gemini-2.5"):
+                generation_config["thinkingConfig"] = {
+                    "thinkingBudget": 0
+                }
+
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": user_prompt}
+                        ]
+                    }
+                ],
+                "generationConfig": generation_config
+            }
+            if system_prompt:
+                payload["systemInstruction"] = {
+                    "parts": [
+                        {"text": system_prompt}
+                    ]
+                }
+            
+            # Configure JSON mode if expected
+            if "json" in system_prompt.lower() or "json" in user_prompt.lower():
+                payload["generationConfig"]["responseMimeType"] = "application/json"
+
+            try:
+                async with httpx.AsyncClient(verify=False, timeout=30.0) as client:
+                    response = await client.post(url, headers=headers, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        raise ValueError("No candidates returned from Gemini API")
+                    
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if not parts:
+                        raise ValueError("No text parts returned from Gemini API")
+                        
+                    return parts[0].get("text", "")
+            except Exception as e:
+                logger.error(f"[LLM] Gemini native API call failed: {e}")
+                raise e
+
+        # Standard client libraries
         if not self.client:
-            logger.warning("[LLM] API Keys not configured. Returning fallback.")
+            logger.warning("[LLM] API Client not initialized. Returning fallback.")
             raise ValueError("No LLM Client configured.")
 
         try:
             if self.provider == "anthropic":
                 response = await self.client.messages.create(
-                    model="claude-3-opus-20240229",
+                    model=self.model,
                     max_tokens=max_tokens,
                     system=system_prompt,
                     messages=[{"role": "user", "content": user_prompt}]
                 )
                 return response.content[0].text
-            elif self.provider == "openai":
+            elif self.provider == "openai" or (self.provider in ("gemini", "google") and self.base_url):
                 response = await self.client.chat.completions.create(
-                    model="gpt-4-turbo",
+                    model=self.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
-                    ]
+                    ],
+                    max_tokens=max_tokens
                 )
                 return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"[LLM] API communication failed: {e}")
+            logger.error(f"[LLM] API communication failed ({self.provider}): {e}")
             raise e
             
         return ""

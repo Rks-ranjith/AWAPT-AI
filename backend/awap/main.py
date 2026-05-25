@@ -5,6 +5,7 @@ from awap.api.websockets import router as ws_router
 from awap.api.oast import router as oast_router
 from awap.api.webhooks import router as webhook_router
 from awap.core.logging_config import setup_logging
+import asyncio
 
 # Industrial Logging Setup
 setup_logging()
@@ -48,8 +49,11 @@ async def startup_event():
     # For this advanced setup, we ensure the engine is connected.
     from awap.core.database import engine
     from awap.models.base import Base
+    from awap.api.websockets import redis_listener
+    
+    # Start Redis listener for WebSocket bridge
+    app.state.redis_listener_task = asyncio.create_task(redis_listener())
     
     # Optional: Auto-create tables for development if needed, but in async.
     async with engine.begin() as conn:
-        # await conn.run_sync(Base.metadata.create_all)
-        pass
+        await conn.run_sync(Base.metadata.create_all)

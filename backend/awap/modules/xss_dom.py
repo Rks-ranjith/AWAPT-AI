@@ -1,13 +1,10 @@
-from .base import AttackModule, register_module, Endpoint, Parameter, ParameterProfile, Finding
-from awap.engines.response.analyzer import ResponseAnalysisEngine
+from awap.engines.attack.base import AttackModule
 import httpx
 from playwright.async_api import async_playwright
 
-@register_module
-class XSSModule(AttackModule):
-    module_id = "xss_reflected"
-    vuln_class = "XSS"
-    severity = "HIGH"
+class XSSDOMModule(AttackModule):
+    module_id = "xss_dom"
+    vuln_class = "XSS_DOM"
 
     # Minimal polymorphic payloads meant to bypass common superficial filters
     PAYLOADS = [
@@ -18,56 +15,61 @@ class XSSModule(AttackModule):
         "'-alert(1337)-'"
     ]
 
-    async def run(self, endpoint: Endpoint, param: Parameter, profile: ParameterProfile) -> list[Finding]:
+    async def run(self, target_url: str, params: list[dict], context=None) -> list[dict]:
         findings = []
-        rae = ResponseAnalysisEngine()
 
-        for payload in self.PAYLOADS:
-            test_url = endpoint.url
-            if param.location == "query":
-                sep = "&" if "?" in test_url else "?"
-                test_url = f"{test_url}{sep}{param.name}={payload}"
-            
-            try:
-                # 1. Quick HTTP fetch to check for pure reflection (RAE)
-                async with httpx.AsyncClient(verify=False, timeout=5.0) as client:
-                    if endpoint.method.upper() == "GET":
-                        response = await client.get(test_url)
-                    else:
-                        response = await client.post(endpoint.url, data={param.name: payload})
-
-                analysis = rae.analyze_response(test_url, response, payload)
+        for param in params:
+            for payload in self.PAYLOADS:
+                test_url = target_url
+                param_name = param.get("name", "")
+                param_type = param.get("type", "url_param")
                 
-                # 2. If RAE detected Reflection, verify actual Execution via Headless Browser
-                if "DIRECT_REFLECTION_FOUND" in analysis.get("evidence", []):
-                    executed = await self._verify_execution_via_browser(test_url, endpoint.method, param, payload)
-                    if executed:
-                        request_raw = f"{endpoint.method} {test_url}\nHost: {response.url.host}"
-                        finding = self.build_finding(
-                            endpoint=endpoint,
-                            param=param,
-                            payload=payload,
-                            request_raw=request_raw,
-                            response_raw=response.text[:2000], # Store preview
-                            confidence=0.99, # Firing headless JS alert is 99% confident
-                            evidence={
-                                "execution_confirmed": True,
-                                "matched_payload": payload,
-                                "reflection_analysis": analysis
-                            }
-                        )
-                        findings.append(finding)
-                        break  # Found a working payload, move on
+                if param_type == "url_param":
+                    sep = "&" if "?" in test_url else "?"
+                    test_url = f"{test_url}{sep}{param_name}={payload}"
+                
+                try:
+                    # Quick HTTP fetch to check reflection (via custom RAE if context is available)
+                    if context:
+                        async with httpx.AsyncClient(verify=False, timeout=5.0) as client:
+                            if param_type == "url_param":
+                                response = await client.get(test_url)
+                            else:
+                                response = await client.post(target_url, data={param_name: payload})
                         
-            except Exception as e:
-                pass
-                
+                        analysis = self.analyze_with_rae(context, test_url, response, payload)
+                        is_reflected = analysis.get("is_vulnerable", False) or "DIRECT_REFLECTION_FOUND" in analysis.get("evidence", [])
+                    else:
+                        is_reflected = True  # Fallback to direct verification if no context
+                    
+                    if is_reflected:
+                        # Verify execution via Playwright
+                        method = "GET" if param_type == "url_param" else "POST"
+                        executed = await self._verify_execution_via_browser(test_url, method, param_name, payload)
+                        if executed:
+                            findings.append({
+                                "vuln_class": "XSS_DOM",
+                                "url": target_url,
+                                "method": method,
+                                "param": param_name,
+                                "parameter_type": param_type.upper(),
+                                "payload": payload,
+                                "evidence": f"XSS executed in browser context using payload: {payload}",
+                                "severity": "HIGH",
+                                "cvss": 7.5,
+                                "confidence": 0.99,
+                                "confirmed": True,
+                                "request_raw": f"{method} {test_url}",
+                                "response_raw": "Headless browser confirmed execution via alert(1337)",
+                            })
+                            break  # Found working payload for this param, move to next param
+                            
+                except Exception:
+                    pass
+                    
         return findings
 
-    async def verify(self, finding: Finding) -> bool:
-        return True
-
-    async def _verify_execution_via_browser(self, test_url: str, method: str, param: Parameter, payload: str) -> bool:
+    async def _verify_execution_via_browser(self, test_url: str, method: str, param_name: str, payload: str) -> bool:
         """
         Uses Playwright to physically load the payloaded page and listen for the `dialog` event
         to absolutely confirm real DOM XSS execution without false positives.
@@ -94,7 +96,7 @@ class XSSModule(AttackModule):
                     # Execute a scripted POST request
                     await page.route("**/*", lambda route: route.continue_(
                         method="POST",
-                        post_data=f"{param.name}={payload}",
+                        post_data=f"{param_name}={payload}",
                         headers={"Content-Type": "application/x-www-form-urlencoded"}
                     ) if route.request.url == test_url else route.continue_())
                     await page.goto(test_url, wait_until="load", timeout=5000)

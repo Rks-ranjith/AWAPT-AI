@@ -9,7 +9,7 @@ import {
   ShieldAlert, Activity
 } from 'lucide-react';
 import { useFindingStore } from '@/store/useFindingStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 const COLORS = ['#6366F1', '#0EA5E9', '#F59E0B', '#EF4444'];
 
@@ -40,6 +40,26 @@ export function Analytics() {
     { name: 'Medium', value: summary?.medium || 0, color: '#0EA5E9' },
     { name: 'Low', value: summary?.low || 0, color: '#6366F1' },
   ];
+
+  const velocityData = useMemo(() => {
+    if (!findings || findings.length === 0) {
+      return [
+        { name: '09:00', val: 0 },
+        { name: '10:00', val: 0 },
+        { name: '11:00', val: 0 },
+        { name: '12:00', val: 0 },
+      ];
+    }
+    const counts: Record<string, number> = {};
+    findings.forEach(f => {
+      const d = new Date(f.discovered_at);
+      const hour = `${d.getHours().toString().padStart(2, '0')}:00`;
+      counts[hour] = (counts[hour] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, val]) => ({ name, val }));
+  }, [findings]);
 
   if (!isLoaded) {
     return <div className="h-full flex items-center justify-center opacity-40">CALCULATING_ANALYTICS...</div>;
@@ -121,14 +141,7 @@ export function Analytics() {
             </div>
             <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={[
-                      { name: '10:00', val: 30 },
-                      { name: '11:00', val: 55 },
-                      { name: '12:00', val: 45 },
-                      { name: '13:00', val: 80 },
-                      { name: '14:00', val: 120 },
-                      { name: '15:00', val: 110 },
-                    ]}>
+                    <LineChart data={velocityData}>
                         <XAxis dataKey="name" fontSize={10} hide />
                         <Tooltip />
                         <Line type="monotone" dataKey="val" stroke="#6366F1" strokeWidth={3} dot={false} />

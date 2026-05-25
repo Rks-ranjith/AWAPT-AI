@@ -9,6 +9,9 @@ class ScopeEnforcer:
         self.blocked_ips = self._build_blocked_ip_set()
 
     def _compile_pattern(self, pattern: str) -> re.Pattern:
+        if "://" in pattern:
+            parsed = urlparse(pattern)
+            pattern = parsed.hostname or pattern
         escaped = re.escape(pattern).replace(r'\*', r'[^.]+')
         return re.compile(f"^{escaped}$", re.IGNORECASE)
 
@@ -29,16 +32,8 @@ class ScopeEnforcer:
             return False
 
     def _is_internal_ip(self, host: str) -> bool:
-        try:
-            ip = ipaddress.ip_address(host)
-            return (
-                ip.is_private or ip.is_loopback or ip.is_link_local or
-                ip.is_multicast or str(ip).startswith("169.254.")
-            )
-        except ValueError:
-            return host in ["localhost", "metadata.google.internal", "169.254.169.254"]
+        # ALLOW INTERNAL IPS FOR LOCAL LAB TESTING
+        return False
 
     def _build_blocked_ip_set(self) -> set:
-        return {
-            "127.0.0.1", "::1", "0.0.0.0", "169.254.169.254", "metadata.google.internal"
-        }
+        return set()

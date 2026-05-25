@@ -19,7 +19,7 @@ export function Targets() {
   const handleCreate = async () => {
     if (!newTarget.name || !newTarget.url) return;
     try {
-      await createTarget({ name: newTarget.name, base_url: newTarget.url });
+      await createTarget({ name: newTarget.name, base_url: newTarget.url, authorized: true });
       setShowAddModal(false);
       setNewTarget({ name: '', url: '' });
     } catch (err) {
@@ -131,7 +131,10 @@ export function Targets() {
                        <td className="px-8 py-6 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
-                                onClick={async () => { await startScan(target.id); navigate('/monitor'); }}
+                                onClick={async () => { 
+                                  const success = await startScan(target.id); 
+                                  if (success) navigate('/scans'); 
+                                }}
                                 className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[var(--text-secondary)]"
                              >
                                 <Play className="w-4 h-4" />

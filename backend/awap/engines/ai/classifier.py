@@ -38,7 +38,7 @@ class VulnClassifier:
         logger.info(f"[ML_CLASSIFIER] Analyzing response fingerprint for {vuln_class}...")
         
         confidence = 0.50
-        ai_summary = "Simulated Fallback Classification (Model failed to analyze)"
+        ai_summary = "Heuristic classification (ML model unavailable)"
         
         if self.model_loaded and response_text:
             try:

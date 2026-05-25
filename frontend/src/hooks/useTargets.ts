@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = '/api/v1';
 
 export function useTargets() {
   const queryClient = useQueryClient();
@@ -15,7 +15,7 @@ export function useTargets() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (newTarget: { name: string; base_url: string }) => {
+    mutationFn: async (newTarget: { name: string; base_url: string; authorized?: boolean }) => {
       const response = await axios.post(`${API_URL}/targets`, newTarget);
       return response.data;
     },
