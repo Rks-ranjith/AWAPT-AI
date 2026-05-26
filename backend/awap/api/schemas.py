@@ -141,3 +141,21 @@ class HealthCheck(BaseModel):
     celery: str
     postgres: str
     redis: str
+
+class SystemSettingsBase(BaseModel):
+    email_enabled: bool = False
+    email_alert: Optional[str] = None
+    slack_enabled: bool = False
+    slack_webhook: Optional[str] = None
+    telegram_enabled: bool = False
+    telegram_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+class SystemSettingsUpdate(SystemSettingsBase):
+    pass
+
+class SystemSettingsResponse(SystemSettingsBase):
+    id: str
+
+    class Config:
+        from_attributes = True

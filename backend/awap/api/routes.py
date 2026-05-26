@@ -24,9 +24,17 @@ router = APIRouter()
 
 @router.post("/targets", response_model=schemas.Target)
 async def create_target(target: schemas.TargetCreate, db: AsyncSession = Depends(get_db)):
+    from datetime import datetime
     db_target = await crud.get_target_by_domain(db, domain=target.domain)
     if db_target:
-        raise HTTPException(status_code=400, detail="Target already exists")
+        db_target.name = target.name
+        db_target.base_url = target.base_url
+        db_target.authorized = target.authorized
+        if target.authorized:
+            db_target.authorized_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(db_target)
+        return db_target
     return await crud.create_target(db=db, target=target)
 
 
@@ -34,6 +42,16 @@ async def create_target(target: schemas.TargetCreate, db: AsyncSession = Depends
 async def read_targets(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     return await crud.get_targets(db, skip=skip, limit=limit)
 
+
+@router.delete("/targets/{target_id}")
+async def delete_target(target_id: UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Target).filter(Target.id == target_id))
+    target = result.scalar()
+    if not target:
+        raise HTTPException(status_code=404, detail="Target not found")
+    await db.delete(target)
+    await db.commit()
+    return {"status": "deleted", "target_id": str(target_id)}
 
 @router.post("/scans", response_model=schemas.Scan)
 async def create_scan(scan: schemas.ScanCreate, db: AsyncSession = Depends(get_db)):
@@ -142,6 +160,13 @@ async def get_analytics_summary(db: AsyncSession = Depends(get_db)):
     )
     targets_count = await db.scalar(select(func.count(Target.id)))
 
+    vuln_dist_query = (
+        select(Finding.vuln_class, func.count(Finding.id))
+        .group_by(Finding.vuln_class)
+    )
+    vuln_dist_res = await db.execute(vuln_dist_query)
+    vuln_distribution = {row[0]: row[1] for row in vuln_dist_res.all()}
+
     return {
         "total": total or 0,
         "critical": critical or 0,
@@ -150,6 +175,7 @@ async def get_analytics_summary(db: AsyncSession = Depends(get_db)):
         "low": low or 0,
         "active_scans": active_scans or 0,
         "targets_count": targets_count or 0,
+        "vuln_distribution": vuln_distribution,
     }
 
 
@@ -291,7 +317,7 @@ async def download_markdown_report(
     return FileResponse(
         path,
         media_type="text/markdown",
-        filename=f"AWAPT_Report_{scan_uuid}_{template}.md",
+        filename=f"AWAP_Report_{scan_uuid}_{template}.md",
     )
 
 
@@ -314,7 +340,7 @@ async def download_pdf_report(
     return FileResponse(
         path,
         media_type="application/pdf",
-        filename=f"AWAPT_Report_{scan_uuid}_{template}.pdf",
+        filename=f"AWAP_Report_{scan_uuid}_{template}.pdf",
     )
 
 
@@ -331,7 +357,7 @@ async def download_csv_report(scan_id: str, db: AsyncSession = Depends(get_db)):
     return FileResponse(
         path,
         media_type="text/csv",
-        filename=f"AWAPT_Findings_{scan_uuid}.csv",
+        filename=f"AWAP_Findings_{scan_uuid}.csv",
     )
 
 
@@ -378,7 +404,7 @@ async def download_exploit(finding_id: UUID, db: AsyncSession = Depends(get_db))
         "param": finding.param,
         "payload": finding.payload,
     }
-    exploit_content = f'''# AWAPT-AI Proof of Concept
+    exploit_content = f'''# AWAP-Ai Proof of Concept
 # Vulnerability: {finding.vuln_class}
 # Target: {finding.url}
 # CWE: {finding.cwe_id or "N/A"}
@@ -403,3 +429,67 @@ async def download_exploit(finding_id: UUID, db: AsyncSession = Depends(get_db))
         media_type="text/x-python",
         filename=f"poc_{finding_id}.py",
     )
+
+
+@router.get("/settings", response_model=schemas.SystemSettingsResponse)
+async def read_settings(db: AsyncSession = Depends(get_db)):
+    from awap.models.setting import SystemSetting
+    result = await db.execute(select(SystemSetting).filter(SystemSetting.id == "default"))
+    sett = result.scalar()
+    if not sett:
+        sett = SystemSetting(id="default")
+        db.add(sett)
+        await db.commit()
+        await db.refresh(sett)
+    return sett
+
+
+@router.post("/settings", response_model=schemas.SystemSettingsResponse)
+async def update_settings(updates: schemas.SystemSettingsUpdate, db: AsyncSession = Depends(get_db)):
+    from awap.models.setting import SystemSetting
+    result = await db.execute(select(SystemSetting).filter(SystemSetting.id == "default"))
+    sett = result.scalar()
+    if not sett:
+        sett = SystemSetting(id="default")
+        db.add(sett)
+    
+    sett.email_enabled = updates.email_enabled
+    sett.email_alert = updates.email_alert
+    sett.slack_enabled = updates.slack_enabled
+    sett.slack_webhook = updates.slack_webhook
+    sett.telegram_enabled = updates.telegram_enabled
+    sett.telegram_token = updates.telegram_token
+    sett.telegram_chat_id = updates.telegram_chat_id
+    
+    await db.commit()
+    await db.refresh(sett)
+    return sett
+
+
+@router.post("/settings/test-telegram")
+async def test_telegram_settings(updates: schemas.SystemSettingsUpdate):
+    if not updates.telegram_token or not updates.telegram_chat_id:
+        raise HTTPException(status_code=400, detail="Telegram token and chat ID are required to send a test message.")
+    import httpx
+    url = f"https://api.telegram.org/bot{updates.telegram_token}/sendMessage"
+    payload = {
+        "chat_id": updates.telegram_chat_id,
+        "text": "🤖 **AWAP-Ai Telegram Integration Test**\n\nConnection verified successfully! Your bot is ready to notify you of scan completions and accept scan commands.",
+        "parse_mode": "Markdown"
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=payload)
+            if response.status_code == 200:
+                return {"status": "success", "message": "Test message sent successfully."}
+            else:
+                try:
+                    err_info = response.json()
+                    detail = err_info.get("description", response.text)
+                except Exception:
+                    detail = response.text
+                raise HTTPException(status_code=400, detail=f"Telegram API Error: {detail}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to communicate with Telegram: {str(e)}")

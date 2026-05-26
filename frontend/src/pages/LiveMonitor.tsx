@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck, Share2,
-  Cpu, Network, Square, Activity, Database
+  Cpu, Network, Square, Activity, Database, CheckCircle2
 } from 'lucide-react';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
@@ -134,19 +134,68 @@ const CY_LAYOUT = {
 };
 
 export function LiveMonitor() {
-  const { isScanning, logs, addLog, stopScan, currentPhase, activeTargetId, activeScanId } = useScanStore();
+  const { isScanning, logs, addLog, stopScan, currentPhase, activeTargetId, activeScanId, scanComplete, recoverScan } = useScanStore();
   const { targets } = useTargets();
   const { isConnected } = useScanMonitor(activeScanId);
-  const activeTarget = targets.find((t: any) => t.id === activeTargetId);
+  const activeTarget = targets.find((t: any) => String(t.id) === String(activeTargetId));
 
   // ── Cytoscape graph state ─────────────────────────────────────────────────
   const [elements, setElements] = useState<any[]>([]);
   const [graphStats, setGraphStats] = useState({ endpoints: 0, vulns: 0 });
   const cyRef = useRef<any>(null);
 
+  // ── Recover scan state on mount (handles page refresh) ────────────────────
+  useEffect(() => {
+    recoverScan();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Poll scan state from API to keep pipeline phases in sync ──────────────
+  useEffect(() => {
+    if (!activeScanId) return;
+    if (!isScanning && !scanComplete) return;
+
+    const pollState = async () => {
+      try {
+        const resp = await axios.get(`${API_URL}/scans/${activeScanId}`);
+        const scan = resp.data;
+        if (scan.state) {
+          const phaseMap: Record<string, string> = {
+            'CREATED': 'RECONNAISSANCE',
+            'SCOPE_VERIFIED': 'RECONNAISSANCE',
+            'RECON': 'RECONNAISSANCE',
+            'CRAWL': 'CRAWLING',
+            'MAPPING': 'CRAWLING',
+            'ATTACK': 'AI_PLANNING',
+            'ANALYSIS': 'AI_PLANNING',
+            'REPORTING': 'VULN_EXPLOITATION',
+            'COMPLETE': 'VULN_EXPLOITATION',
+          };
+          const mappedPhase = phaseMap[scan.state];
+          if (mappedPhase) {
+            useScanStore.getState().setPhase(mappedPhase);
+          }
+
+          if (scan.state === 'COMPLETE' && isScanning) {
+            useScanStore.getState().setScanComplete();
+            addLog('[SYS] ✓ Scan completed successfully. All phases finished.');
+          } else if (scan.state === 'FAILED' && isScanning) {
+            addLog(`[SYS] ✗ Scan failed: ${scan.error_message || 'Unknown error'}`);
+            stopScan();
+          }
+        }
+      } catch {
+        // Scan not found — ignore
+      }
+    };
+
+    pollState();
+    const interval = setInterval(pollState, 4000);
+    return () => clearInterval(interval);
+  }, [activeScanId, isScanning]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Seed domain node whenever a new scan starts ───────────────────────────
   useEffect(() => {
-    if (isScanning && activeTarget) {
+    if ((isScanning || scanComplete) && activeTarget) {
       setElements([{
         data: {
           id: 'target',
@@ -154,16 +203,18 @@ export function LiveMonitor() {
           type: 'target',
         },
       }]);
-      setGraphStats({ endpoints: 0, vulns: 0 });
-    } else if (!isScanning) {
+      if (!scanComplete) {
+        setGraphStats({ endpoints: 0, vulns: 0 });
+      }
+    } else if (!isScanning && !scanComplete) {
       setElements([]);
       setGraphStats({ endpoints: 0, vulns: 0 });
     }
-  }, [isScanning, activeTarget?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isScanning, scanComplete, activeTarget?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 3-second graph data poll ──────────────────────────────────────────────
   useEffect(() => {
-    if (!isScanning || !activeScanId) return;
+    if ((!isScanning && !scanComplete) || !activeScanId) return;
 
     const poll = async () => {
       try {
@@ -264,7 +315,9 @@ export function LiveMonitor() {
     poll();
     const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
-  }, [isScanning, activeScanId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isScanning, scanComplete, activeScanId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isActive = isScanning || scanComplete;
 
   return (
     <div className="p-10 max-w-7xl mx-auto space-y-10 relative z-10">
@@ -273,11 +326,15 @@ export function LiveMonitor() {
         <div className="flex items-center gap-6">
           <div className={cn(
             'w-16 h-16 rounded-[24px] flex items-center justify-center shadow-xl transition-all duration-500',
-            isScanning
-              ? 'bg-[var(--accent)] shadow-indigo-500/30'
-              : 'bg-gray-200 dark:bg-gray-800 shadow-none border border-[var(--border-subtle)]'
+            scanComplete
+              ? 'bg-emerald-500 shadow-emerald-500/30'
+              : isScanning
+                ? 'bg-[var(--accent)] shadow-indigo-500/30'
+                : 'bg-gray-200 dark:bg-gray-800 shadow-none border border-[var(--border-subtle)]'
           )}>
-            <Activity className={cn('w-8 h-8 text-white', isScanning && 'animate-pulse')} />
+            {scanComplete
+              ? <CheckCircle2 className="w-8 h-8 text-white" />
+              : <Activity className={cn('w-8 h-8 text-white', isScanning && 'animate-pulse')} />}
           </div>
           <div>
             <h1 className="text-4xl font-display font-black tracking-tight mb-1">Live Engine Monitor</h1>
@@ -287,17 +344,32 @@ export function LiveMonitor() {
               </span>
               <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-secondary)]" />
               <span className="text-xs font-bold text-[var(--text-secondary)]">
-                {isScanning
-                  ? isConnected
-                    ? '⬤ STREAMING CORE DATA...'
-                    : '⬤ CONNECTING...'
-                  : 'Engine Standby'}
+                {scanComplete
+                  ? '✓ SCAN COMPLETE'
+                  : isScanning
+                    ? isConnected
+                      ? '⬤ STREAMING CORE DATA...'
+                      : '⬤ CONNECTING...'
+                    : 'Engine Standby'}
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex gap-4">
+          {scanComplete && (
+            <button
+              className="px-6 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-bold text-sm flex items-center gap-2 hover:bg-emerald-500/20 transition-all cursor-pointer"
+              onClick={() => {
+                stopScan();
+                setElements([]);
+                setGraphStats({ endpoints: 0, vulns: 0 });
+              }}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Clear Results
+            </button>
+          )}
           {isScanning && (
             <button
               className="px-6 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold text-sm flex items-center gap-2 hover:bg-red-500/20 transition-all cursor-pointer"
@@ -325,8 +397,8 @@ export function LiveMonitor() {
             <div className="space-y-6">
               {PIPELINE_PHASES.map((phase, i) => {
                 const activeIndex = PIPELINE_PHASES.findIndex(p => p.status_key === currentPhase);
-                const isPast   = activeIndex === -1 ? false : i < activeIndex;
-                const isActive = phase.status_key === currentPhase;
+                const isPast   = scanComplete ? true : (activeIndex === -1 ? false : i < activeIndex);
+                const isActivePhase = scanComplete ? (i === PIPELINE_PHASES.length - 1) : phase.status_key === currentPhase;
 
                 return (
                   <div key={phase.id} className="relative flex gap-6 group">
@@ -336,7 +408,7 @@ export function LiveMonitor() {
                     <div className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-500',
                       isPast  ? 'bg-emerald-500 border-emerald-500 text-white' :
-                      isActive ? 'border-[var(--accent)] bg-[var(--bg-card)] text-[var(--accent)] shadow-lg shadow-indigo-500/20' :
+                      isActivePhase ? 'border-[var(--accent)] bg-[var(--bg-card)] text-[var(--accent)] shadow-lg shadow-indigo-500/20' :
                                'border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
                     )}>
                       <span className="text-[10px] font-black">{i + 1}</span>
@@ -344,12 +416,12 @@ export function LiveMonitor() {
                     <div className="pb-10 pt-1">
                       <div className={cn(
                         'text-sm font-black tracking-tight transition-colors',
-                        isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
+                        isActivePhase ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
                       )}>
                         {phase.label}
                       </div>
                       <div className="text-[10px] font-bold text-[var(--text-secondary)] tracking-widest uppercase mt-0.5">
-                        {isActive ? 'Executing...' : isPast ? 'Verified ✓' : 'Pending'}
+                        {isActivePhase && isScanning ? 'Executing...' : isPast ? 'Verified ✓' : isActivePhase && scanComplete ? 'Complete ✓' : 'Pending'}
                       </div>
                     </div>
                   </div>
@@ -429,7 +501,7 @@ export function LiveMonitor() {
         <div className="lg:col-span-8 flex flex-col gap-8">
           {/* Live log feed */}
           <div className="flex-1 premium-card flex flex-col overflow-hidden min-h-[500px] relative">
-            {isScanning || logs.length > 0 ? (
+            {isActive || logs.length > 0 ? (
               <LiveFeed items={logs.map((log, idx) => {
                 let type: FeedItem['type'] = 'recon';
                 let severity: FeedItem['severity'] = 'INFO';
@@ -468,7 +540,7 @@ export function LiveMonitor() {
               <div>
                 <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">Current Phase</div>
                 <div className="text-base font-black text-[var(--text-primary)] truncate max-w-[140px]">
-                  {isScanning ? currentPhase : 'Idle'}
+                  {scanComplete ? 'Complete ✓' : isScanning ? currentPhase : 'Idle'}
                 </div>
               </div>
             </div>
@@ -479,9 +551,11 @@ export function LiveMonitor() {
               <div>
                 <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">Engine Status</div>
                 <div className="text-base font-black text-[var(--text-primary)]">
-                  {isScanning
-                    ? isConnected ? 'Live — Connected' : 'Initializing...'
-                    : '—'}
+                  {scanComplete
+                    ? 'Scan Finished'
+                    : isScanning
+                      ? isConnected ? 'Live — Connected' : 'Initializing...'
+                      : '—'}
                 </div>
               </div>
             </div>

@@ -28,7 +28,11 @@ def extract_endpoints_from_js(js_content: str) -> list[str]:
 def is_in_scope(url: str, start_url: str) -> bool:
     target_netloc = urlparse(start_url).netloc
     test_netloc = urlparse(url).netloc
-    if test_netloc and test_netloc != target_netloc:
+    
+    def normalize_netloc(nl: str) -> str:
+        return nl.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+
+    if test_netloc and normalize_netloc(test_netloc) != normalize_netloc(target_netloc):
         return False
     risk_keywords = ["logout", "signout", "delete"]
     if any(k in url.lower() for k in risk_keywords):
@@ -51,6 +55,7 @@ async def store_crawl_page(scan_id: str, url: str, links: list[str], forms: list
             
         for form in forms:
             action = form.get("action") or url
+            action = action.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
             form_method = str(form.get("method", "GET")).upper()
             form_params = [i["name"] for i in form.get("inputs", []) if "name" in i]
             fe = await db.scalar(select(Endpoint).filter(Endpoint.scan_id == scan_id, Endpoint.url == action.split("?")[0], Endpoint.method == form_method))
@@ -63,6 +68,7 @@ async def harvest_endpoint(req, scan_id: str):
     if req.resource_type in ["xhr", "fetch"]:
         try:
             url = req.url.split("?")[0]
+            url = url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
             method = req.method
             async with AsyncSessionLocal() as db:
                 e = await db.scalar(select(Endpoint).filter(Endpoint.scan_id == scan_id, Endpoint.url == url, Endpoint.method == method))
@@ -86,7 +92,8 @@ async def crawl_target(start_url: str, scan_id: str, max_pages: int = 100):
             args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         )
         context = await browser.new_context(
-            user_agent='Mozilla/5.0 (compatible; SecurityScanner/1.0)'
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ignore_https_errors=True
         )
         page = await context.new_page()
         
@@ -103,7 +110,13 @@ async def crawl_target(start_url: str, scan_id: str, max_pages: int = 100):
             visited.add(url)
             
             try:
-                await page.goto(url, timeout=15000, wait_until='networkidle')
+                # Use domcontentloaded to handle dynamic pages that have long-running tracking connections
+                await page.goto(url, timeout=10000, wait_until='domcontentloaded')
+            except Exception as e:
+                await log_crawl_error(scan_id, url, f"Navigation timeout or certificate issue: {e}")
+                # We do not skip the page on timeout or navigation errors, since some content may have successfully loaded
+            
+            try:
                 # Extract all links
                 links = await page.eval_on_selector_all('a[href]', 'els => els.map(e => e.href)')
                 
@@ -123,7 +136,7 @@ async def crawl_target(start_url: str, scan_id: str, max_pages: int = 100):
                         logger.info(f"JS extracted endpoint: {ep}")
                         
             except Exception as e:
-                await log_crawl_error(scan_id, url, str(e))
+                await log_crawl_error(scan_id, url, f"Content extraction failed: {e}")
                 continue
         
         await browser.close()

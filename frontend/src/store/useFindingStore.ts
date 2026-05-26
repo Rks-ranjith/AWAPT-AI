@@ -27,6 +27,7 @@ interface FindingState {
     low: number;
     active_scans: number;
     targets_count: number;
+    vuln_distribution: Record<string, number>;
   };
   loading: boolean;
   fetchFindings: () => Promise<void>;
@@ -36,7 +37,7 @@ interface FindingState {
 
 export const useFindingStore = create<FindingState>((set, get) => ({
   findings: [],
-  summary: { total: 0, critical: 0, high: 0, medium: 0, low: 0, active_scans: 0, targets_count: 0 },
+  summary: { total: 0, critical: 0, high: 0, medium: 0, low: 0, active_scans: 0, targets_count: 0, vuln_distribution: {} },
   loading: false,
   fetchFindings: async () => {
     set({ loading: true });

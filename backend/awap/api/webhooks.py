@@ -41,7 +41,7 @@ async def trigger_cicd_scan(
         if not authorized:
             raise HTTPException(
                 status_code=403,
-                detail="Target not found. Create and authorize the target in AWAPT-AI first, "
+                detail="Target not found. Create and authorize the target in AWAP-Ai first, "
                 "or pass authorized=true only for pre-approved automation scopes.",
             )
         target = Target(domain=target_url, authorized=True)

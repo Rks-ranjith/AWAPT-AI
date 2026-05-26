@@ -65,10 +65,16 @@ export function AttackerConsole({ findingId, isOpen, onClose }: AttackerConsoleP
 
     // Handle user input
     let currentInput = '';
+    const commandHistory: string[] = [];
+    let historyIndex = -1;
+
     term.onData((data) => {
-      // Basic input handling
       if (data === '\r') {
         // Enter pressed
+        if (currentInput.trim()) {
+          commandHistory.push(currentInput);
+          historyIndex = commandHistory.length;
+        }
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(currentInput);
         }
@@ -79,6 +85,49 @@ export function AttackerConsole({ findingId, isOpen, onClose }: AttackerConsoleP
           currentInput = currentInput.slice(0, -1);
           term.write('\b \b');
         }
+      } else if (data === '\u001b[A') {
+        // Up arrow: navigate history up
+        if (historyIndex > 0) {
+          // Clear current input
+          for (let i = 0; i < currentInput.length; i++) {
+            term.write('\b \b');
+          }
+          historyIndex--;
+          currentInput = commandHistory[historyIndex];
+          term.write(currentInput);
+        }
+      } else if (data === '\u001b[B') {
+        // Down arrow: navigate history down
+        if (historyIndex < commandHistory.length - 1) {
+          // Clear current input
+          for (let i = 0; i < currentInput.length; i++) {
+            term.write('\b \b');
+          }
+          historyIndex++;
+          currentInput = commandHistory[historyIndex];
+          term.write(currentInput);
+        } else if (historyIndex === commandHistory.length - 1) {
+          for (let i = 0; i < currentInput.length; i++) {
+            term.write('\b \b');
+          }
+          historyIndex = commandHistory.length;
+          currentInput = '';
+        }
+      } else if (data === '\u0003') {
+        // Ctrl+C
+        term.write('^C\r\n');
+        currentInput = '';
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('');
+        }
+      } else if (data === '\u000c') {
+        // Ctrl+L (Clear screen)
+        term.clear();
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('clear');
+        }
+      } else if (data.startsWith('\u001b')) {
+        // Ignore other escape sequences (like left/right arrows)
       } else {
         currentInput += data;
         term.write(data);

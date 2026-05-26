@@ -29,3 +29,6 @@ anthropic
 dnspython
 aiohttp
 reportlab
+scikit-learn
+numpy
+

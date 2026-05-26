@@ -61,7 +61,7 @@ class NoSQLInjectionModule(AttackModule):
         lower_body = resp.text.lower()
         indicators = [
             "mongodb", "bson", "nosql", "query failed",
-            "access granted", "welcome admin", "id: 1", "admin"
+            "access granted", "welcome admin"
         ]
         if resp.status_code in [200, 500] and any(i in lower_body for i in indicators):
             return True

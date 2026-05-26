@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     SHODAN_API_KEY: str | None = os.getenv("SHODAN_API_KEY")
     VIRUSTOTAL_API_KEY: str | None = os.getenv("VIRUSTOTAL_API_KEY")
 
+    # SMTP Settings
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "no-reply@awap.ai")
+
     @property
     def webhook_key_list(self) -> list[str]:
         if not self.WEBHOOK_API_KEYS:

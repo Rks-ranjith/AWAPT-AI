@@ -102,6 +102,23 @@ services:
     ports:
       - "3000:3000"
 
+  playground:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: awap_playground
+    command: python -m awap.playground.app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8080:8080"
+
+  dvga:
+    image: dolevf/dvga
+    container_name: awap_dvga
+    ports:
+      - "5013:5013"
+
   # ----------------------------------------------------
   # AWAP-AI FRONTEND
   # ----------------------------------------------------
@@ -115,6 +132,8 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_PROXY_TARGET=http://api:8000
+      - VITE_WS_PROXY_TARGET=ws://api:8000
     depends_on:
       - api
 

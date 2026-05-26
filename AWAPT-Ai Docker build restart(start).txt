@@ -1,0 +1,23 @@
+AWAPT-Ai Docker build restart/start
+
+# --------- FULL RESTART (clean DB) ----------
+docker compose down -v --remove-orphans
+docker compose up -d --build
+
+# --------- SOFT RESTART (preserve DB) ----------
+docker compose down --remove-orphans
+docker compose up -d --build
+
+# --------- RESTART SINGLE SERVICE ----------
+docker compose restart api          # FastAPI
+docker compose restart celery_worker
+docker compose restart flower
+docker compose restart frontend
+docker compose restart juice_shop   # fresh target — no DB persisted, automatic clean
+
+# --------- ENSURE EVERYTHING IS LIVE ----------
+docker compose ps
+docker compose exec db pg_isready -U awapuser -d awap_db
+docker compose exec redis redis-cli ping
+curl http://localhost:8000/health
+curl -I http://localhost:5173 | findstr HTTP

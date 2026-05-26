@@ -87,16 +87,22 @@ async def async_run_recon(scan_id: str, target_id: str):
         from awap.engines.recon.base import enumerate_subdomains, fingerprint_target, scan_common_ports
         from awap.models.recon_result import ReconResult
 
+        # Map localhost/127.0.0.1 to host.docker.internal for docker loopback compatibility
+        mapped_domain = target.domain.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+
         for s in await enumerate_subdomains(target.domain):
             db.add(
                 ReconResult(
                     scan_id=scan_id, type="subdomain", data=s, source=s.get("source", "unknown")
                 )
             )
-        base_url = target.domain if target.domain.startswith("http") else f"https://{target.domain}"
+        base_url = mapped_domain if mapped_domain.startswith("http") else f"https://{mapped_domain}"
         tech = await fingerprint_target(base_url)
         db.add(ReconResult(scan_id=scan_id, type="technology", data=tech, source="fingerprint"))
-        ports = await scan_common_ports(target.domain)
+        
+        from urllib.parse import urlparse
+        parsed = urlparse(base_url)
+        ports = await scan_common_ports(parsed.hostname or mapped_domain)
         db.add(ReconResult(scan_id=scan_id, type="port", data={"open_ports": ports}, source="portscan"))
         await db.commit()
         await log_scan_event(db, scan_id, "INFO", "Reconnaissance complete")
@@ -110,7 +116,8 @@ async def async_run_crawl(scan_id: str, target_id: str):
         from awap.engines.crawler.base import crawl_target
 
         base = target.domain if target.domain.startswith("http") else f"https://{target.domain}"
-        await crawl_target(base, scan_id, max_pages=settings.SCAN_MAX_PAGES)
+        mapped_base = base.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+        await crawl_target(mapped_base, scan_id, max_pages=settings.SCAN_MAX_PAGES)
         await log_scan_event(db, scan_id, "INFO", "Crawl complete")
 
 
@@ -147,12 +154,17 @@ async def async_run_report(scan_id: str, target_id: str):
         await _set_phase(db, scan_id, "REPORTING", 95, "Report generation started")
         from awap.reporting.report_generator import generate_reports
 
-        generate_reports(scan_id, target_id, template="all")
+        generate_reports(scan_id, target_id, template="tech")
         await update_scan_state(db, scan_id, "COMPLETE", progress=100)
         await log_scan_event(db, scan_id, "INFO", "Scan completed successfully")
         await _publish_redis_event(
             scan_id, {"type": "STATE_CHANGE", "state": "COMPLETE", "progress": 100}
         )
+        try:
+            from awap.core.notifier import dispatch_scan_complete_alerts
+            await dispatch_scan_complete_alerts(scan_id, target_id)
+        except Exception as e:
+            logger.error(f"Failed to dispatch scan alerts: {e}")
 
 
 async def async_log_error(scan_id: str, msg: str):

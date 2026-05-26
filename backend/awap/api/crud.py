@@ -15,6 +15,8 @@ async def get_targets(db: AsyncSession, skip: int = 0, limit: int = 100):
 async def create_target(db: AsyncSession, target: schemas.TargetCreate):
     db_target = Target(
         domain=target.domain,
+        name=target.name,
+        base_url=target.base_url,
         scope_rules=target.scope_rules,
         authorized=target.authorized
     )

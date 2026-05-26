@@ -26,7 +26,10 @@ class ScanContext:
     def from_target(cls, scan_id: str, target_id: str, domain: str, profile: str, scope_rules: list) -> "ScanContext":
         from awap.core.config import settings
 
-        in_scope = [domain]
+        # Map localhost/127.0.0.1 to host.docker.internal for docker loopback compatibility
+        mapped_domain = domain.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+
+        in_scope = [domain, mapped_domain]
         out_scope: list[str] = []
         for rule in scope_rules or []:
             if isinstance(rule, dict):
@@ -35,16 +38,23 @@ class ScanContext:
                     out_scope.append(pattern)
                 elif pattern:
                     in_scope.append(pattern)
+                    mapped_pattern = pattern.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+                    in_scope.append(mapped_pattern)
             elif isinstance(rule, str):
                 in_scope.append(rule)
+                mapped_rule = rule.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+                in_scope.append(mapped_rule)
 
         enforcer = ScopeEnforcer(in_scope=list(set(in_scope)), out_of_scope=out_scope)
         rps = getattr(settings, "SCAN_RATE_LIMIT", 10.0)
+        
+        base_url = mapped_domain if mapped_domain.startswith("http") else f"https://{mapped_domain}"
+        
         return cls(
             scan_id=str(scan_id),
             target_id=str(target_id),
             target_domain=domain,
-            base_url=f"https://{domain}" if not domain.startswith("http") else domain,
+            base_url=base_url,
             profile=profile or "standard",
             scope_enforcer=enforcer,
             rate_limiter=TargetRateLimiter(requests_per_second=float(rps)),

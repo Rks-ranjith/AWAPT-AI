@@ -15,15 +15,19 @@ export function Targets() {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTarget, setNewTarget] = useState({ name: '', url: '' });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (!newTarget.name || !newTarget.url) return;
+    setErrorMsg(null);
     try {
       await createTarget({ name: newTarget.name, base_url: newTarget.url, authorized: true });
       setShowAddModal(false);
       setNewTarget({ name: '', url: '' });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add target:", err);
+      const msg = err.response?.data?.detail || "Failed to index target. Please check the URL format.";
+      setErrorMsg(msg);
     }
   };
 
@@ -38,7 +42,7 @@ export function Targets() {
         </div>
         
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { setErrorMsg(null); setShowAddModal(true); }}
           className="bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -132,10 +136,11 @@ export function Targets() {
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
                                 onClick={async () => { 
-                                  const success = await startScan(target.id); 
+                                  const success = await startScan(String(target.id)); 
                                   if (success) navigate('/scans'); 
                                 }}
                                 className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[var(--text-secondary)]"
+                                title="Start Scan"
                              >
                                 <Play className="w-4 h-4" />
                              </button>
@@ -202,7 +207,14 @@ export function Targets() {
                            className="w-full bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-2xl px-5 py-4 font-body outline-none focus:ring-2 ring-indigo-500/20 transition-all font-mono"
                          />
                       </div>
-                   </div>
+                    </div>
+ 
+                    {errorMsg && (
+                       <div className="text-red-500 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-2 animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+                          {errorMsg}
+                       </div>
+                    )}
 
                    <div className="flex gap-4">
                       <button 

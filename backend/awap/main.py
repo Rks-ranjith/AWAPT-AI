@@ -50,6 +50,7 @@ async def startup_event():
     from awap.core.database import engine
     from awap.models.base import Base
     from awap.api.websockets import redis_listener
+    from sqlalchemy import text
     
     # Start Redis listener for WebSocket bridge
     app.state.redis_listener_task = asyncio.create_task(redis_listener())
@@ -57,3 +58,28 @@ async def startup_event():
     # Optional: Auto-create tables for development if needed, but in async.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE targets ADD COLUMN IF NOT EXISTS name VARCHAR;"))
+            await conn.execute(text("ALTER TABLE targets ADD COLUMN IF NOT EXISTS base_url VARCHAR;"))
+        except Exception as e:
+            pass
+
+    # Ensure default settings row exists
+    from awap.core.database import AsyncSessionLocal
+    from awap.models.setting import SystemSetting
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        try:
+            res = await db.execute(select(SystemSetting).filter(SystemSetting.id == "default"))
+            if not res.scalar():
+                db.add(SystemSetting(id="default"))
+                await db.commit()
+        except Exception as e:
+            pass
+
+    # Start Telegram bot polling service
+    try:
+        from awap.core.telegram_bot import start_telegram_bot
+        app.state.telegram_bot_task = asyncio.create_task(start_telegram_bot())
+    except Exception as e:
+        pass

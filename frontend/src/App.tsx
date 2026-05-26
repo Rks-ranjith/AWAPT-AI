@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Targets } from './pages/Targets';
 import { Findings } from './pages/Findings';
 import { LiveMonitor } from './pages/LiveMonitor';
+import { AttackGraph } from './pages/AttackGraph';
 import { Settings } from './pages/Settings';
 
 // Placeholder Pages
@@ -27,6 +28,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="team" element={<Team />} />
         
+        <Route path="attack-graph" element={<AttackGraph />} />
         {/* Add more routes here */}
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

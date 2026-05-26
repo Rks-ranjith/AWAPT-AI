@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { 
   BarChart2, Shield, Activity, Target, Settings, 
-  Bell, Search, Hexagon, 
+  Bell, Search, Hexagon, Share2,
   Menu, X, ChevronRight, Sun, Moon, FileText
 } from 'lucide-react';
 import { useState } from 'react';
@@ -15,6 +15,7 @@ const NAV_GROUPS = [
     items: [
       { id: 'dashboard', label: 'Overview', icon: BarChart2, path: '/dashboard' },
       { id: 'scans', label: 'Engine Console', icon: Activity, path: '/scans' },
+      { id: 'attack-graph', label: 'Attack Graph', icon: Share2, path: '/attack-graph' },
       { id: 'analytics', label: 'Security Analytics', icon: BarChart2, path: '/analytics' },
     ]
   },

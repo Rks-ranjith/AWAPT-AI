@@ -93,7 +93,7 @@ export function Reports() {
       const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `AWAPT_${selectedTemplate}_${preview?.scan_id || selectedScanId}.pdf`;
+      link.download = `AWAP_${selectedTemplate}_${preview?.scan_id || selectedScanId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -122,7 +122,7 @@ export function Reports() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `AWAPT_findings_${preview?.scan_id || scan}.json`;
+        a.download = `AWAP_findings_${preview?.scan_id || scan}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -159,7 +159,7 @@ export function Reports() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `AWAPT_${format === 'bounty' ? 'bounty_submissions' : format}_${preview?.scan_id || scan}.${extension}`;
+      a.download = `AWAP_${format === 'bounty' ? 'bounty_submissions' : format}_${preview?.scan_id || scan}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -267,7 +267,7 @@ export function Reports() {
           <div className="flex-1 premium-card bg-white dark:bg-gray-950 shadow-2xl relative overflow-hidden min-h-[600px] flex flex-col">
             <div className="p-8 border-b border-gray-100 dark:border-gray-900 flex justify-between items-center">
               <div className="text-[var(--accent)] font-display font-black text-2xl">
-                AWAPT<span className="opacity-50 text-[var(--text-primary)]">_REPORT</span>
+                AWAP<span className="opacity-50 text-[var(--text-primary)]">_REPORT</span>
               </div>
               <div className="text-[10px] font-mono opacity-60 text-right">
                 {preview ? (

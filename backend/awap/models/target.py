@@ -10,6 +10,8 @@ class Target(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     domain = Column(String, nullable=False)
+    name = Column(String, nullable=True)
+    base_url = Column(String, nullable=True)
     scope_rules = Column(JSONB, nullable=False, default=list)
     authorized = Column(Boolean, nullable=False, default=False)
     authorized_at = Column(DateTime(timezone=True), nullable=True)
