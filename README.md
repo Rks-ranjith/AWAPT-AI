@@ -172,8 +172,23 @@ docker-compose exec api alembic upgrade head
 docker-compose exec api python -m awap.cli create-admin
 
 # 6. Open dashboard
-open http://localhost:3000
+open http://localhost:5173
 ```
+
+---
+
+## Deliberately Vulnerable Targets (Local Testbed)
+
+To test the scanning capabilities locally, the Docker Compose environment includes pre-configured vulnerable target applications:
+
+| Target Application | Local URL | Container Name | Vulnerability Focus |
+|---|---|---|---|
+| **OWASP Juice Shop** | `http://localhost:3000` | `awap_juice_shop` | Modern OWASP Top 10 (Node.js/Angular) |
+| **DVWA** | `http://localhost:4280` | `awap_dvwa` | Classic Web Vulnerabilities (PHP/MySQL) |
+| **DVGA** | `http://localhost:5013` | `awap_dvga` | GraphQL Vulnerabilities |
+| **OWASP WebGoat** | `http://localhost:8090/WebGoat` | `awap_webgoat` | Java Web Security & Lessons |
+| **bWAPP** | `http://localhost:8091` | `awap_bwapp` | Extensive web vulnerabilities (PHP/MySQL) |
+| **AWAP Playground** | `http://localhost:8080` | `awap_playground` | Custom local sandbox target |
 
 ---
 
