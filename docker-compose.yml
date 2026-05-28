@@ -119,6 +119,18 @@ services:
     ports:
       - "5013:5013"
 
+  webgoat:
+    image: webgoat/webgoat:latest
+    container_name: awap_webgoat
+    ports:
+      - "8090:8080"
+
+  bwapp:
+    image: raesene/bwapp
+    container_name: awap_bwapp
+    ports:
+      - "8091:80"
+
   # ----------------------------------------------------
   # AWAP-AI FRONTEND
   # ----------------------------------------------------

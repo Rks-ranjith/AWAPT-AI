@@ -195,7 +195,7 @@ export function Settings() {
     try {
       const { data } = await axios.post('/api/v1/settings/test-telegram', {
         email_enabled: emailEnabled,
-        email_alert: emailAlert,
+        email_alert: emailAlerts.filter(e => e.trim()).join(', '),
         slack_enabled: slackEnabled,
         slack_webhook: slackWebhook,
         telegram_enabled: telegramEnabled,
