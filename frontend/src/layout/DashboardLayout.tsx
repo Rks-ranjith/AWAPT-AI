@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { 
   BarChart2, Shield, Activity, Target, Settings, 
-  Bell, Search, Hexagon, Share2,
+  Bell, Hexagon, Share2,
   Menu, X, ChevronRight, Sun, Moon, FileText
 } from 'lucide-react';
 import { useState } from 'react';
@@ -160,20 +160,6 @@ export function DashboardLayout() {
            </div>
 
            <div className="flex items-center gap-6">
-              {/* Modern Search */}
-              <div className="hidden md:flex items-center gap-3 bg-[var(--bg-card)] border border-[var(--border-subtle)] px-4 py-2.5 rounded-2xl focus-within:ring-2 ring-[var(--accent)]/20 transition-all shadow-sm">
-                 <Search className="w-4 h-4 text-[var(--text-secondary)]" />
-                 <input 
-                   type="text" 
-                   placeholder="Search commands..." 
-                   className="bg-transparent border-none outline-none text-sm font-body w-48 placeholder:text-[var(--text-secondary)]/50"
-                 />
-                 <div className="flex gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[10px] text-[var(--text-secondary)]">⌘</kbd>
-                    <kbd className="px-1.5 py-0.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[10px] text-[var(--text-secondary)]">K</kbd>
-                 </div>
-              </div>
-
               <div className="flex items-center gap-3">
                  <button 
                     onClick={toggleTheme}
