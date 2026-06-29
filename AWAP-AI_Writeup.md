@@ -12,6 +12,10 @@
 
 ---
 
+![AWAP-AI Command Center Dashboard](screenshots/dashboard.png)
+
+---
+
 ## 1. Executive Concept & "Why AWAP-AI?"
 
 In modern software engineering, rapid release cycles (CI/CD) and Single-Page Application (SPA) architectures have outpaced traditional, manually driven penetration testing. While legacy automated vulnerability scanners (like OWASP ZAP or Burp Suite Pro) excel at signature-based pattern matching, they suffer from three fundamental limitations:
@@ -445,6 +449,8 @@ The user inputs `http://juice_shop:3000` via the Target Wizard on the dashboard.
 [2026-06-01 09:12:05] [STATE_CHANGE] Scan State: CREATED -> SCOPE_VERIFIED
 ```
 
+![Attack Surface Manager - Target Verification](screenshots/attack_surface.png)
+
 ---
 
 ### Phase 2: Crawler Discovery & Parameter Fuzzing
@@ -460,6 +466,8 @@ Playwright spins up and starts mapping the Juice Shop SPA:
 [2026-06-01 09:16:22] [INFO] Parameter isolated successfully on /rest/products/search -> 'q'
 [2026-06-01 09:16:30] [STATE_CHANGE] Scan State: CRAWL -> MAPPING
 ```
+
+![Live Engine Monitor - Active Recon & Crawling Logs](screenshots/engine_console.png)
 
 ---
 
@@ -491,6 +499,8 @@ The attack orchestrator loads the `sqli_error` module and schedules fuzzing requ
 [2026-06-01 09:19:45] [WS_BRIDGE] Broadcasted SQL_INJECTION alert event to connected telemetry dashboard.
 ```
 
+![Interactive Attack Surface Graph - Exploit Vectors Topological View](screenshots/attack_graph.png)
+
 ---
 
 ### Phase 4: AI Analysis Pipeline & Score Formulation
@@ -501,6 +511,8 @@ The surfaced finding is routed through the AI classification manager:
    - **CVSS Score:** 9.8 (CRITICAL)
    - **CWE Assignment:** CWE-89 (SQL Injection)
 3. **Gemini** writes the remediation guidelines for SQLite and Node.js backend drivers.
+
+![Security Analytics Portal - Risk Analytics & Severity Breakdown](screenshots/security_analytics.png)
 
 ---
 
@@ -522,6 +534,8 @@ Under the Findings screen on the dashboard, developers can inspect the structure
   "remediation": "Implement parameterized queries using prepared statements. In SQLite/Node.js: db.all('SELECT * FROM products WHERE name LIKE ?', [query])"
 }
 ```
+
+![Vulnerability Intelligence - Detailed Audit Evidence](screenshots/vulnerability_intelligence.png)
 
 The user selects **Generate Report** in the **Reports** portal, chooses the `tech` template, and downloads an audit-ready PDF compiling the findings, along with a `bounty` template export containing a submission-ready Markdown report.
 
